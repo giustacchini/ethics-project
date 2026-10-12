@@ -1,18 +1,27 @@
 from dataclasses import dataclass, field
-from enum import Enum, auto
 from typing import Any
+
 from mosaic_multigrid.base import AgentID
-
-
-class EventType(Enum):
-    MOVED = auto()
-    INVALID_MOVE = auto()
-    AGENT_COLLISION = auto()
+from Enums import EventType
 
 
 @dataclass(frozen=True)
 class Event:
-    type: Enum
+    """A record of something that happened in the game.
+
+    When an agent does something (moves, makes an invalid move,
+    bumps into another agent), the environment creates an Event
+    and saves it in an EventLog. The reward code then looks at
+    these events to decide which rewards to give.
+
+    Fields:
+        type: What happened (an EventType, e.g. MOVED).
+        agent_id: Which agent it happened to, if any.
+        team_id: Which team it happened to, if any.
+        step: The step number when it happened.
+        data: Any extra details about the event.
+    """
+    type: EventType
     agent_id: AgentID | None = None
     team_id: int | None = None
     step: int = 0
@@ -20,12 +29,17 @@ class Event:
 
 
 class EventLog:
+    """A list of everything that has happened in the game.
+
+    Use emit() to add an event, events() to read them all,
+    and clear() to empty the list, for example before a new step.
+    """
     def __init__(self) -> None:
         self._events: list[Event] = []
 
     def emit(
         self,
-        type: Enum,
+        type: EventType,
         agent_id: AgentID | None = None,
         team_id: int | None = None,
         step: int = 0,
