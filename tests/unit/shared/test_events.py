@@ -1,5 +1,7 @@
-from shared.events import Event, EventType, EventLog
+from shared.events import Event, EventLog
 from enum import Enum, auto
+from Enums import EventType
+
 
 
 def test_event_stores_given_values():

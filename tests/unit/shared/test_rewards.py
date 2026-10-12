@@ -1,6 +1,6 @@
 from enum import Enum, auto
-
-from shared.events import Event, EventType
+from shared.events import Event
+from Enums import EventType
 from shared.rewards import EventRewardCalculator
 
 

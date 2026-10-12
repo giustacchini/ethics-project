@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from mosaic_multigrid.base import AgentID
-from Enums import EventType
+from enum import Enum
 
 
 @dataclass(frozen=True)
@@ -21,7 +21,7 @@ class Event:
         step: The step number when it happened.
         data: Any extra details about the event.
     """
-    type: EventType
+    type: Enum
     agent_id: AgentID | None = None
     team_id: int | None = None
     step: int = 0
@@ -39,7 +39,7 @@ class EventLog:
 
     def emit(
         self,
-        type: EventType,
+        type: Enum,
         agent_id: AgentID | None = None,
         team_id: int | None = None,
         step: int = 0,
