@@ -28,7 +28,11 @@ class SnowPlowEnv(MultiGridEnv):
 
         for agent in self.agents:
             self.place_agent(agent)
-
+         
+    def get_observable_grid(self):
+        """Grid that the agents may see."""
+        return self.grid.state.copy()
+    
     def is_move_allowed(self, grid, agent, current_pos, intended_pos) -> bool:
         """
         Domain-specific movement hook.
