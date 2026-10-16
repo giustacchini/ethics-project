@@ -43,6 +43,11 @@ def test_opposing_contest_is_seeded_and_has_one_winner():
     assert winners == {0, 1}
 
 
-def test_mixed_multi_player_contest_requires_rule():
-    with pytest.raises(NotImplementedError):
-        resolve([(3, 3), (5, 3), (4, 2)], [(4, 3)] * 3, [0, 0, 1])
+@pytest.mark.parametrize('teams,winner', [([0, 0, 1], 2), ([0, 1, 1], 0), ([0, 0, 1, 1], None)])
+def test_multiple_teammates_are_excluded_before_contest(teams, winner):
+    positions = [(3, 3), (5, 3), (4, 2), (4, 4)][:len(teams)]
+    for reverse in (False, True):
+        results = resolve(positions, [(4, 3)] * len(teams), teams, reverse=reverse)
+        assert {i for i, r in results.items() if r['status'] == 'moved'} == ({winner} if winner is not None else set())
+        for i, record in results.items():
+            assert tuple(record['resolved_position']) == ((4, 3) if i == winner else positions[i])

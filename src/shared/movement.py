@@ -1,13 +1,4 @@
-# python
-# shared/movement.py
-"""
-Generic simultaneous multi-agent movement resolution
-
-IMPORTANT: this is a generalization of the movement-conflict logic
-(`src/snow_plow_env.py`,
-`build_movement_intentions` / `validate_proposed_moves` /
-`resolve_simultaneous_conflicts` / `commit_resolved_positions`).
-"""
+"""Domain-independent simultaneous movement stages and conflict resolution."""
 
 from __future__ import annotations
 
@@ -17,7 +8,7 @@ from typing import Callable, Optional
 import numpy as np
 from mosaic_multigrid.base import AgentID
 
-from Enums import MovementActions
+from enums import MovementActions
 from shared.grid import in_bounds, is_statically_blocked
 
 # Type alias: (grid, agent, current_pos, intended_pos) -> bool

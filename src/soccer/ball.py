@@ -1,6 +1,27 @@
-"""Soccer ball state; flight is represented but not simulated yet."""
+"""Soccer ball state and integer-grid kick trajectories."""
 
 from mosaic_multigrid.core.world_object import Ball
+
+
+def build_trajectory(start, target):
+    """Bresenham cells, excluding the starting cell and including the target."""
+    x, y = start
+    end_x, end_y = target
+    dx, dy = abs(end_x - x), -abs(end_y - y)
+    step_x = 1 if x < end_x else -1
+    step_y = 1 if y < end_y else -1
+    error = dx + dy
+    cells = []
+    while (x, y) != (end_x, end_y):
+        doubled_error = 2 * error
+        if doubled_error >= dy:
+            error += dy
+            x += step_x
+        if doubled_error <= dx:
+            error += dx
+            y += step_y
+        cells.append((x, y))
+    return cells
 
 
 class CustomBall(Ball):
@@ -18,6 +39,10 @@ class CustomBall(Ball):
         self.last_possessing_team = last_possessing_team
         self.remaining_trajectory = list(remaining_trajectory or [])
         self.speed = speed
+        self.kicker_id = None
+
+    def can_overlap(self):
+        return True
 
     @property
     def flight_state(self):

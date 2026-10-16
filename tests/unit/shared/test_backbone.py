@@ -1,24 +1,33 @@
-# python
-# test_shared_backbone.py
-"""
-Issue #5: tests for reset/seeding, movement-rule conflicts, and
-rendering -- run against the REAL SnowPlowEnv / mosaic_multigrid stack
-(not the SimpleNamespace stub used in test_snow_plow_env.py). This is
-what originally caught the `agent.state.pos.copy()` bug: the stub's
-`pos` was a numpy array, but the real `AgentState.pos` returns a plain
-tuple for a single agent, so `.copy()` only fails against the real lib.
-"""
+"""Integration tests for the shared movement pipeline against real MultiGrid."""
 
 import numpy as np
 import pytest
 
-from Enums import MovementActions
+from enums import MovementActions
 from shared.rendering import ascii_grid
-from snow_plow_env import SnowPlowEnv
+from mosaic_multigrid.base import MultiGridEnv
+from mosaic_multigrid.core.grid import Grid
+from shared.movement import handle_simultaneous_movement
+
+
+class MovementTestEnv(MultiGridEnv):
+    """Minimal real environment for domain-independent movement tests."""
+
+    def _gen_grid(self, width, height):
+        self.grid = Grid(width, height)
+        self.grid.wall_rect(0, 0, width, height)
+        for agent in self.agents:
+            self.place_agent(agent)
+
+    def handle_actions(self, actions):
+        self.last_movement_results = handle_simultaneous_movement(
+            self.agents, self.grid, actions, self.width, self.height,
+        )
+        return {agent.index: 0.0 for agent in self.agents}
 
 
 def make_env(num_agents=1, width=8, height=8, max_steps=50, seed=1):
-    env = SnowPlowEnv(agents=num_agents, width=width, height=height, max_steps=max_steps)
+    env = MovementTestEnv(agents=num_agents, width=width, height=height, max_steps=max_steps)
     env.reset(seed=seed)
     return env
 
@@ -48,8 +57,8 @@ def test_reset_returns_valid_agent_positions():
 
 
 def test_same_seed_is_reproducible():
-    e1 = SnowPlowEnv(agents=4, width=10, height=10, max_steps=50)
-    e2 = SnowPlowEnv(agents=4, width=10, height=10, max_steps=50)
+    e1 = MovementTestEnv(agents=4, width=10, height=10, max_steps=50)
+    e2 = MovementTestEnv(agents=4, width=10, height=10, max_steps=50)
     e1.reset(seed=123)
     e2.reset(seed=123)
     pos1 = [tuple(a.state.pos) for a in e1.agents]
@@ -58,8 +67,8 @@ def test_same_seed_is_reproducible():
 
 
 def test_different_seed_usually_differs():
-    e1 = SnowPlowEnv(agents=4, width=10, height=10, max_steps=50)
-    e2 = SnowPlowEnv(agents=4, width=10, height=10, max_steps=50)
+    e1 = MovementTestEnv(agents=4, width=10, height=10, max_steps=50)
+    e2 = MovementTestEnv(agents=4, width=10, height=10, max_steps=50)
     e1.reset(seed=1)
     e2.reset(seed=2)
     pos1 = [tuple(a.state.pos) for a in e1.agents]
@@ -132,7 +141,7 @@ def test_rgb_frame_renders_without_crashing():
 
 
 def test_many_random_episodes_do_not_crash():
-    env = SnowPlowEnv(agents=2, width=8, height=8, max_steps=20)
+    env = MovementTestEnv(agents=2, width=8, height=8, max_steps=20)
     rng = np.random.default_rng(0)
     for episode in range(20):
         env.reset(seed=episode)

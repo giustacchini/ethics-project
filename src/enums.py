@@ -13,6 +13,13 @@ class MovementActions(enum.Enum):
     DOWN_RIGHT = (1, 1)
     DOWN_LEFT = (-1, 1)
 
+class SoccerActionType(enum.IntEnum):
+    MOVE = 0
+    KICK = 1
+    DO_NOTHING = 2
+    TACKLE = 3
+    AGGRESSIVE_TACKLE = 4
+    DIVE = 5
 
 class EventType(Enum):
     MOVED = auto()
@@ -20,12 +27,6 @@ class EventType(Enum):
     AGENT_COLLISION = auto()
     DO_NOTHING = auto()
 
-
-class SnowplowEvent(Enum):
-    PARTIALLY_CLEARED = auto()
-    SECONDARY_STREET_CLEARED = auto()
-    MAIN_STREET_CLEARED = auto()
-    ALL_CLEAN = auto()
 
 class SoccerEvent(Enum):
     MATCH_WIN = auto()

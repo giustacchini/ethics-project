@@ -1,6 +1,6 @@
 import pytest
 
-from Enums import MovementActions
+from enums import MovementActions
 from soccer.agent import SoccerAgentRole
 from soccer.env import SoccerEnv, SoccerEnvConfig
 
@@ -28,7 +28,7 @@ def test_goalkeeper_bounds_follow_current_role_and_team():
         agent.current_role = SoccerAgentRole.GOALKEEPER
         for x in range(16):
             for y in range(11):
-                expected = (0 <= x <= 2 if agent.team_index == 0 else 13 <= x <= 15) and 2 <= y <= 8
+                expected = (0 <= x <= 2 if agent.team_index == 0 else 13 <= x <= 15) and 3 <= y <= 7
                 assert env.is_move_allowed(env.grid, agent, agent.state.pos, (x, y)) == expected
     field_player = env.agents[1]
     field_player.current_role = SoccerAgentRole.FIELD_PLAYER

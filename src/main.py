@@ -1,23 +1,26 @@
+"""Render a random soccer match: python src/main.py [--seed 0]."""
+
+import argparse
+
 from soccer.env import SoccerEnv
 
-env = SoccerEnv(render_mode="human")
-obs, info = env.reset(seed=0)
 
-total = {i: 0.0 for i in obs}
-step = 0
-done = False
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--seed', type=int, default=0)
+    args = parser.parse_args()
+    env = SoccerEnv(render_mode='human')
+    try:
+        env.reset(seed=args.seed)
+        action_space = env.action_space
+        action_space.seed(args.seed + 10000)
+        while not env.match_over:
+            env.step(action_space.sample())
+        print(f'Match finished after {env.step_count} steps: {env.team_scores}, {env.match_result}')
+        print('Team rewards:', env.last_team_rewards)
+    finally:
+        env.close()
 
-while not done:
-    # One random action per agent, all sent simultaneously
-    actions = env.action_space.sample()
-    obs, rewards, terms, truncs, infos = env.step(actions)
 
-    for i, r in rewards.items():
-        total[i] += r
-    step += 1
-
-    done = all(terms.values()) or all(truncs.values())
-
-print(f"\nMatch finished after {step} steps")
-print("Total reward per agent:", {i: round(r, 2) for i, r in total.items()})
-env.close()
+if __name__ == '__main__':
+    main()

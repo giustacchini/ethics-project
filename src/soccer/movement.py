@@ -2,18 +2,14 @@
 
 from collections import defaultdict
 
-from shared.movement import (
-    build_movement_intentions,
-    validate_proposed_moves,
-    commit_resolved_positions,
-)
 
+def resolve_simultaneous_conflicts(
+    validated_moves, agents_by_id, rng, *, loose_ball_position=None,
+    contest_intensities=None, contest_events=None,
+):
+    """Block duplicate teammates, then resolve eligible opposing contenders.
 
-def resolve_simultaneous_conflicts(validated_moves, agents_by_id, rng):
-    """Resolve start-occupied cells and two-player empty-cell contests.
-
-    Multi-player contests need an agreed rule and are rejected explicitly.
-    Ball possession and loose-ball contests are handled in a later stage.
+    Loose-ball cards are reported before any live positions are committed.
     """
     resolved = {agent_id: record.copy() for agent_id, record in validated_moves.items()}
     occupied = {tuple(record['current_position']) for record in validated_moves.values()}
@@ -32,16 +28,34 @@ def resolve_simultaneous_conflicts(validated_moves, agents_by_id, rng):
         else:
             contenders[target].append(agent_id)
 
-    for agent_ids in contenders.values():
+    for target, agent_ids in sorted(contenders.items()):
         agent_ids = sorted(agent_ids)
-        if len(agent_ids) == 1:
-            winners = agent_ids
-        elif len({agents_by_id[i].team_index for i in agent_ids}) == 1:
-            winners = []
-        elif len(agent_ids) == 2:
-            winners = [agent_ids[int(rng.integers(2))]]
+        teams = defaultdict(list)
+        for agent_id in agent_ids:
+            teams[agents_by_id[agent_id].team_index].append(agent_id)
+        eligible_ids = sorted(members[0] for members in teams.values() if len(members) == 1)
+        if len(eligible_ids) <= 1:
+            winners = eligible_ids
+        elif len(eligible_ids) == 2:
+            if target == loose_ball_position:
+                intensities = {i: (contest_intensities or {}).get(i, 0) for i in eligible_ids}
+                successes = {i: bool(rng.random() < (0.8 if intensities[i] else 0.5)) for i in eligible_ids}
+                cards = [i for i in eligible_ids if intensities[i] and rng.random() < 0.5]
+                successful = [i for i in eligible_ids if successes[i]]
+                winner = None
+                if not cards and successful:
+                    strongest = max(intensities[i] for i in successful)
+                    eligible = [i for i in successful if intensities[i] == strongest]
+                    winner = eligible[0] if len(eligible) == 1 else eligible[int(rng.integers(2))]
+                event = dict(position=target, players=eligible_ids, intensities=intensities,
+                             successes=successes, red_cards=cards, winner=winner)
+                if contest_events is not None:
+                    contest_events.append(event)
+                winners = [] if winner is None else [winner]
+            else:
+                winners = [eligible_ids[int(rng.integers(2))]]
         else:
-            raise NotImplementedError('Mixed-team contests with more than two players need a rule')
+            raise ValueError('Soccer movement supports at most two competing teams')
 
         for agent_id in agent_ids:
             record = resolved[agent_id]
@@ -52,16 +66,3 @@ def resolve_simultaneous_conflicts(validated_moves, agents_by_id, rng):
                 record['status'] = 'blocked_same_destination'
 
     return resolved
-
-
-def handle_simultaneous_movement(
-    agents, grid, actions, width, height, rng, is_move_allowed=None,
-):
-    """Validate and resolve the joint action before committing any position."""
-    agents_by_id = {agent.index: agent for agent in agents}
-    intentions = build_movement_intentions(agents, actions)
-    validated = validate_proposed_moves(
-        intentions, agents_by_id, grid, width, height, is_move_allowed,
-    )
-    resolved = resolve_simultaneous_conflicts(validated, agents_by_id, rng)
-    return commit_resolved_positions(agents_by_id, resolved)

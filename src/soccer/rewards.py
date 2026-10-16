@@ -1,9 +1,10 @@
-"""Reward values (configuration v1.0) and calculator for the soccer environment."""
+"""Match-outcome-only team rewards and their shared calculator."""
 
-from Enums import SoccerEvent
+from enums import SoccerEvent
 from shared.rewards import EventRewardCalculator
 
-# Reward configuration v1.0 (see the rules and rewards spec, Section 8)
+# Session choice supersedes the Markdown's shaped baseline: no intermediate
+# rewards. Keep the existing public constant name for callers.
 SOCCER_REWARDS_V1 = {
     SoccerEvent.MATCH_WIN: 1000,
     SoccerEvent.MATCH_LOSS: -1000,
