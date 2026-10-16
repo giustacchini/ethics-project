@@ -442,3 +442,21 @@ that their legal adjacent dive-target sets are disjoint. The former shared
 dive-target placeholder is now an assertion identifying corrupted state.
 The source audit finds no remaining unsupported/NotImplementedError/TODO
 branches in src/soccer; full-match integration validation is still required.
+
+## Structured-only full observability
+
+SoccerObservationProvider in soccer/observations.py supplies each roster
+member the complete structured game state and its own ID/team. It also
+defines the matching Gymnasium observation space. Returned snapshots remain
+independent of the environment and each other, including final observations.
+
+Local image, direction and mission observation fields have been removed.
+Soccer no longer calls Mosaic's local observation generator or temporarily
+changes termination flags to hide suspended players from image observations.
+Internal orientation still exists for drawing players, not as a local-view
+observation requirement.
+
+The full-pitch GUI renders directly from the grid and active players.
+Local field-of-view highlighting is disabled; the inherited rendering API's
+highlight argument is accepted for compatibility but has no visual effect.
+Rendering does not generate agent observations.

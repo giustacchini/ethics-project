@@ -47,3 +47,41 @@ def test_observations_do_not_alias_state_or_other_agents():
     assert obs[1]['current_roles'][1] == 1
     frame = env.get_full_render(highlight=True, tile_size=16)
     assert frame.shape == (176, 256, 3)
+
+
+@pytest.mark.parametrize('size', [2, 3])
+def test_structured_observations_do_not_generate_local_images(size, monkeypatch):
+    from mosaic_multigrid.base import MultiGridEnv
+
+    def local_images_must_not_run(*args, **kwargs):
+        raise AssertionError('Soccer must not generate local image observations')
+
+    monkeypatch.setattr(MultiGridEnv, 'gen_obs', local_images_must_not_run)
+    env = SoccerEnv(SoccerEnvConfig(n_players_per_team=size), max_steps=1)
+    obs, _ = env.reset(seed=0)
+    for observation in obs.values():
+        assert not {'image', 'direction', 'mission', 'global_rgb'} & observation.keys()
+        assert len(observation['agent_positions']) == 2 * size
+    common = [{k: v for k, v in observation.items() if k not in ('self_id', 'self_team')}
+              for observation in obs.values()]
+    assert all(state == common[0] for state in common)
+    assert env.observation_space.contains(obs)
+    obs, _, _, truncs, _ = env.step({a.index: MovementActions.DO_NOTHING for a in env.agents})
+    assert all(truncs.values())
+    assert env.observation_space.contains(obs)
+    assert len(obs) == 2 * size  # final observations remain available to everyone
+
+
+def test_gui_frame_does_not_depend_on_observations_or_local_highlights(monkeypatch):
+    import numpy as np
+
+    env = SoccerEnv()
+    env.reset(seed=0)
+    def observations_must_not_run():
+        raise AssertionError('Rendering must read state directly')
+    monkeypatch.setattr(env, 'gen_obs', observations_must_not_run)
+    normal = env.get_frame(highlight=False, tile_size=16)
+    highlighted = env.get_frame(highlight=True, tile_size=16)
+    assert normal.shape == (176, 256, 3)
+    assert np.array_equal(normal, highlighted)
+    assert env.highlight is False

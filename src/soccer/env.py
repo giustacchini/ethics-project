@@ -4,6 +4,7 @@ from copy import deepcopy
 
 from gymnasium import spaces
 from mosaic_multigrid.base import MultiGridEnv
+from mosaic_multigrid.core.constants import TILE_PIXELS
 
 from enums import MovementActions, SoccerActionType, SoccerEvent
 from shared.events import EventLog
@@ -16,6 +17,7 @@ from soccer.rewards import make_soccer_reward_calculator
 from soccer.config import SoccerEnvConfig
 from soccer.ball_rules import BallRules
 from soccer.discipline import DisciplineRules
+from soccer.observations import SoccerObservationProvider
 
 
 class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
@@ -50,38 +52,13 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
         super().__init__(
             agents=agents, width=width, height=height,
             max_steps=self.config.max_steps if max_steps is None else max_steps,
-            render_mode=render_mode, allow_agent_overlap=False,
+            render_mode=render_mode, allow_agent_overlap=False, highlight=False,
         )
         self.reward_calculator = make_soccer_reward_calculator()
         self.reward_range = (-1000, 1000)
+        self.observation_provider = SoccerObservationProvider()
         for agent in self.agents:
-            position_space = lambda: spaces.MultiDiscrete([self.width, self.height])
-            agent.observation_space = spaces.Dict({
-                **agent.observation_space.spaces,
-                'self_id': spaces.Discrete(self.num_agents),
-                'self_team': spaces.Discrete(2),
-                'agent_positions': spaces.Dict({a.index: spaces.MultiDiscrete(
-                    [self.width + 1, self.height + 1], start=[-1, -1],
-                ) for a in self.agents}),
-                'suspended': spaces.Dict({a.index: spaces.Discrete(2) for a in self.agents}),
-                'agent_teams': spaces.Dict({a.index: spaces.Discrete(2) for a in self.agents}),
-                'original_roles': spaces.Dict({a.index: spaces.Discrete(2) for a in self.agents}),
-                'current_roles': spaces.Dict({a.index: spaces.Discrete(2) for a in self.agents}),
-                'ball_present': spaces.Discrete(2),
-                # -1 denotes no ball, carrier or previous possessing team.
-                'ball_position': spaces.MultiDiscrete([self.width + 1, self.height + 1], start=[-1, -1]),
-                'ball_carrier': spaces.Discrete(self.num_agents + 1, start=-1),
-                'ball_kicker': spaces.Discrete(self.num_agents + 1, start=-1),
-                'last_possessing_team': spaces.Discrete(3, start=-1),
-                'ball_state': spaces.Discrete(4),  # absent, loose, possessed, in flight
-                'ball_trajectory': spaces.Sequence(position_space()),
-                'ball_speed': spaces.Discrete(3),
-                'steps_left': spaces.Discrete(self.max_steps + 1),
-                'score': spaces.Dict({team: spaces.Discrete(self.max_steps + 1) for team in (0, 1)}),
-                'goal_pending': spaces.Discrete(2),
-                'match_result': spaces.Discrete(4),  # ongoing, left win, right win, draw
-                'free_kick_taker': spaces.Discrete(self.num_agents + 1, start=-1),
-            })
+            agent.observation_space = self.observation_provider.build_space(self)
 
     def _gen_grid(self, width, height):
         self._reset_formation()
@@ -172,43 +149,11 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
         return True
 
     def gen_obs(self):
-        # Keep Mosaic's local image for its renderer; structured fields expose
-        # all implemented state independently of view_size/global_obs.
-        # Hide suspended players from Mosaic's image encoder without marking
-        # their RL episodes terminal: they may return after the next goal.
-        hidden = [(a, bool(a.state.terminated)) for a in self.agents if a.suspended]
-        try:
-            for agent, _ in hidden:
-                agent.state.terminated = True
-            observations = super().gen_obs()
-        finally:
-            for agent, terminated in hidden:
-                agent.state.terminated = terminated
-        ball = self.ball
-        state = {
-            'agent_positions': {a.index: (-1, -1) if a.suspended else tuple(a.state.pos) for a in self.agents},
-            'suspended': {a.index: int(a.suspended) for a in self.agents},
-            'agent_teams': {a.index: a.team_index for a in self.agents},
-            'original_roles': {a.index: a.original_role.value for a in self.agents},
-            'current_roles': {a.index: a.current_role.value for a in self.agents},
-            'ball_present': int(ball is not None),
-            'ball_position': tuple(ball.position) if ball is not None else (-1, -1),
-            'ball_carrier': ball.carrier_id if ball is not None and ball.carrier_id is not None else -1,
-            'ball_kicker': ball.kicker_id if ball is not None and ball.kicker_id is not None else -1,
-            'last_possessing_team': ball.last_possessing_team if ball is not None and ball.last_possessing_team is not None else -1,
-            'ball_state': {'loose': 1, 'possessed': 2, 'in_flight': 3}[ball.flight_state] if ball is not None else 0,
-            'ball_trajectory': tuple(tuple(p) for p in ball.remaining_trajectory) if ball is not None else (),
-            'ball_speed': ball.speed if ball is not None else 0,
-            'steps_left': max(0, self.max_steps - self.step_count),
-            'score': self.team_scores.copy(),
-            'goal_pending': int(self.pending_goal is not None),
-            'match_result': {'ongoing': 0, 'left_win': 1, 'right_win': 2, 'draw': 3}[self.match_result],
-            'free_kick_taker': self.free_kick_taker if self.free_kick_taker is not None else -1,
-        }
-        for agent in self.agents:
-            observations[agent.index].update(deepcopy(state))
-            observations[agent.index].update(self_id=agent.index, self_team=agent.team_index)
-        return observations
+        return self.observation_provider.get_observations(self)
+
+    def get_full_render(self, highlight=False, tile_size=TILE_PIXELS):
+        """Render the full pitch; local-view highlights do not apply to soccer."""
+        return self.grid.render(tile_size, agents=self.active_players)
 
     def step(self, actions):
         if self.match_over:
