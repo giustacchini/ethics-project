@@ -22,3 +22,13 @@ class SnowplowEvent(Enum):
     SECONDARY_STREET_CLEARED = auto()
     MAIN_STREET_CLEARED = auto()
     ALL_CLEAN = auto()
+
+class SoccerEvent(Enum):
+    MATCH_WIN = auto()
+    MATCH_LOSS = auto()
+    MATCH_DRAW = auto()
+    GOAL_SCORED = auto()
+    GOAL_CONCEDED = auto()
+    PASS_COMPLETED = auto()
+    POSSESSION_RECOVERED = auto()
+    POSSESSION_LOST = auto()
