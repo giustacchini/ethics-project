@@ -52,10 +52,10 @@ def train(config):
     directory = Path(config.output)
     directory.mkdir(parents=True, exist_ok=True)
     metrics_path = directory / 'metrics.jsonl'
-    if metrics_path.exists() or any(directory.glob('update_*.pt')):
+    if metrics_path.exists() or (directory / 'matches.jsonl').exists() or any(directory.glob('update_*.pt')):
         raise FileExistsError(f'Training output already contains a run: {directory}; choose a new output directory')
     env_config = SoccerEnvConfig(n_players_per_team=config.team_size, max_steps=config.max_steps)
-    env = SoccerEnv(env_config)
+    env = SoccerEnv(env_config, event_log_path=directory / 'matches.jsonl')
     try:
         observations, _ = env.reset(seed=config.seed)
         _, obs, state, _ = encode_team(observations, 0, max_steps=config.max_steps)

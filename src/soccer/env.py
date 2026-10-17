@@ -19,6 +19,7 @@ from soccer.config import SoccerEnvConfig
 from soccer.ball_rules import BallRules
 from soccer.discipline import DisciplineRules
 from soccer.observations import SoccerObservationProvider
+from soccer.match_logging import MatchLog
 
 
 class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
@@ -27,7 +28,9 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
     # Integer actions: wait, up, down, right, left, then four diagonals.
     movement_actions = tuple(MovementActions)
 
-    def __init__(self, config=None, width=16, height=11, max_steps=None, render_mode=None):
+    def __init__(self, config=None, width=16, height=11, max_steps=None, render_mode=None, event_log_path=None, show_events=False, render_fps: int =20):
+        self.metadata["render_fps"] = render_fps
+        self.match_log = MatchLog(event_log_path, show_events=show_events)
         self.config = config if config is not None else SoccerEnvConfig()
         if self.config.n_players_per_team not in (2, 3):
             raise ValueError("Soccer supports 2 or 3 players per team")
@@ -60,6 +63,11 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
         self.observation_provider = SoccerObservationProvider()
         for agent in self.agents:
             agent.observation_space = self.observation_provider.build_space(self)
+
+    def reset(self, *, seed=None, options=None):
+        result = super().reset(seed=seed, options=options)
+        self.match_log.start(self)
+        return result
 
     def _gen_grid(self, width, height):
         self._reset_formation()
@@ -166,6 +174,11 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
     def step(self, actions):
         if self.match_over:
             raise RuntimeError('Match finished; call reset before stepping again')
+        before = [dict(id=a.index, team=a.team_index, position=tuple(a.state.pos),
+                       suspended=a.suspended,
+                       decision_eligible=not a.suspended and (self.free_kick_taker is None or self.free_kick_taker == a.index))
+                  for a in self.agents]
+        submitted = deepcopy(actions)
         observations, rewards, terminations, truncations, infos = super().step(actions)
         # Reaching three goals is a natural terminal, even at the time limit.
         if self.match_over and max(self.team_scores.values()) >= 3:
@@ -186,6 +199,7 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
             )
             if self.last_goal is not None:
                 infos[agent.index]['goal_scored_by'] = deepcopy(self.last_goal)
+        self.match_log.transition(self, submitted, before)
         return observations, rewards, terminations, truncations, infos
 
     def _finish_transition(self):
