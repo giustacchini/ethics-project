@@ -51,3 +51,17 @@ Source organization:
 The ball and discipline classes supply rule methods directly to `SoccerEnv`;
 they do not keep separate copies of match state or add delegation wrappers.
 `SoccerEnvConfig` remains importable from `soccer.env` for existing callers.
+
+### MAPPO training and watching
+
+```bash
+source .venv/bin/activate
+PYTHONPATH=src python -m algorithms.mappo.train --device auto --output checkpoints/run1
+PYTHONPATH=src python -m soccer.watch checkpoints/run1/update_0010.pt --headless --device cpu
+```
+
+The default trains Team 0 against random. Add `--self-play` to train both
+independent actor/critic pairs. Set `--team-size 2` for a separate 2v2 run.
+Devices include `auto`, `cpu`, `cuda[:index]` and `mps`; accelerator execution
+requires a compatible PyTorch build and hardware. See
+[MAPPO integration](docs/MAPPO_INTEGRATION.md) for rollout, checkpoint and GPU details.
