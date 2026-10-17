@@ -139,7 +139,8 @@ soccer test, including the real MultiGrid integration tests. It does not
 exclude legacy failures or require manual source-path manipulation. Coverage
 can be enabled explicitly with `pytest --cov=src --cov-report=term-missing`.
 
-Shared-backbone tests use a minimal real MultiGrid fixture in
-`tests/unit/shared/test_backbone.py`; they do not depend on the retired
-snowplow environment. Soccer complete-match validator tests import the
-headless runner from `soccer.validate_matches`.
+Shared-backbone code (`src/shared/`) is exercised through the soccer tests,
+since soccer is its only user. Rendering tests (`test_soccer_rendering.py`)
+compare rendered tile pixels, so they need no window or display. Soccer
+complete-match validator tests import the headless runner from
+`soccer.validate_matches`.

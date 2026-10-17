@@ -6,6 +6,7 @@ from enums import MovementActions, SoccerActionType
 from soccer.agent import SoccerAgentRole
 from soccer.ball import CustomBall
 from soccer.env import SoccerEnv
+from soccer.rendering import keeper_area_cells
 
 
 def arrange(team=1, temporary=False, goal=True):
@@ -89,11 +90,12 @@ def test_other_player_cannot_enter_dribblers_starting_cell_before_rollback():
 
 @pytest.mark.parametrize('team', [0, 1])
 @pytest.mark.parametrize('row,inside', [(2, False), (3, True), (7, True), (8, False)])
-def test_goalkeeper_movement_penalty_classification_and_shading_agree(team, row, inside):
+def test_goalkeeper_movement_penalty_classification_and_drawn_area_agree(team, row, inside):
     env = SoccerEnv()
     env.reset(seed=0)
     x = 1 if team == 0 else 14
     keeper = env.agents[team * 3]
     assert env.is_move_allowed(env.grid, keeper, keeper.state.pos, (x, row)) == inside
     assert env._is_penalty_foul(team, (x, row)) == inside
-    assert (env.grid.background_at(x, row) == env.grid.GOALKEEPER_COLOR) == inside
+    # The white goalkeeper box drawn by soccer/rendering.py covers exactly these cells.
+    assert ((x, row) in keeper_area_cells(team, env.width)) == inside

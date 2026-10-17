@@ -4,7 +4,7 @@ from copy import deepcopy
 
 from soccer.agent import SoccerAgentRole
 from soccer.ball import CustomBall
-from soccer.grid import SoccerGrid
+from mosaic_multigrid.core import Grid
 
 
 class DisciplineRules:
@@ -166,7 +166,7 @@ class DisciplineRules:
     def _automatic_concession(self, team):
         """Award one goal with a consistent final ball state and no restart."""
         self.last_restart = {'type': 'automatic_goal', 'team': 1 - team}
-        self.grid = SoccerGrid(self.width, self.height, goal_rows=self.config.goal_rows)
+        self.grid = Grid(self.width, self.height)
         for agent in self.agents:
             agent.state.carrying = None
         goal = (0 if team == 0 else 15, 5)
@@ -248,7 +248,7 @@ class DisciplineRules:
         }
         self.free_kick_taker = None if inside else taker.index
         # Interrupt the entire joint action; discard any old loose/flight marker.
-        self.grid = SoccerGrid(self.width, self.height, goal_rows=self.config.goal_rows)
+        self.grid = Grid(self.width, self.height)
         for agent in self.active_players:
             agent.state.pos = positions[agent.index]
             agent.state.carrying = None

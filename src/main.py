@@ -16,6 +16,9 @@ def main():
         action_space.seed(args.seed + 10000)
         while not env.match_over:
             env.step(action_space.sample())
+            # print(env.last_goal)
+            # print(env.age)
+            # print(f'Step {env.step_count}: {env.last_step_info}')
         print(f'Match finished after {env.step_count} steps: {env.team_scores}, {env.match_result}')
         print('Team rewards:', env.last_team_rewards)
     finally:

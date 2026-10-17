@@ -4,6 +4,7 @@ from copy import deepcopy
 
 from gymnasium import spaces
 from mosaic_multigrid.base import MultiGridEnv
+from mosaic_multigrid.core import Grid
 from mosaic_multigrid.core.constants import TILE_PIXELS
 
 from enums import MovementActions, SoccerActionType, SoccerEvent
@@ -12,7 +13,7 @@ from soccer.movement import resolve_simultaneous_conflicts
 from shared.movement import build_movement_intentions, validate_proposed_moves, commit_resolved_positions
 from soccer.agent import SoccerAgent, SoccerAgentRole
 from soccer.ball import CustomBall
-from soccer.grid import SoccerGrid
+from soccer.rendering import render_soccer_frame
 from soccer.rewards import make_soccer_reward_calculator
 from soccer.config import SoccerEnvConfig
 from soccer.ball_rules import BallRules
@@ -102,7 +103,7 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
         """Restore players without resetting scores, elapsed time or events."""
         width, height = self.width, self.height
         self.free_kick_taker = None
-        self.grid = SoccerGrid(width, height, goal_rows=self.config.goal_rows)
+        self.grid = Grid(width, height)  # plain Mosaic grid: it only stores the ball; drawing lives in soccer/rendering.py
         team_size = self.config.n_players_per_team
         formations = (
             (((0, 5), (3, 5)), ((15, 5), (12, 5))) if team_size == 2 else
@@ -152,8 +153,15 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
         return self.observation_provider.get_observations(self)
 
     def get_full_render(self, highlight=False, tile_size=TILE_PIXELS):
-        """Render the full pitch; local-view highlights do not apply to soccer."""
-        return self.grid.render(tile_size, agents=self.active_players)
+        """Render the full pitch in the original Mosaic soccer style.
+
+        Mosaic's get_frame()/render() (human window and rgb_array) call this hook.
+        It used to draw flat green tiles through a custom Grid subclass; it now
+        delegates to soccer/rendering.py. ``highlight`` is ignored on purpose:
+        our observations are the full structured state, so there is no local
+        field of view to highlight. Game logic is not touched by rendering.
+        """
+        return render_soccer_frame(self, tile_size)
 
     def step(self, actions):
         if self.match_over:
@@ -415,3 +423,17 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
         else:
             self.last_kick_results = {i: 'not_carrier' for i in kick_requests}
         return self._transition_rewards()
+
+
+# ---------------------------------------------------------------------------
+# Factories used by the gymnasium registration in soccer/__init__.py, so the
+# env can be created by id exactly like the original Mosaic one:
+#     import soccer, gymnasium as gym
+#     env = gym.make("EthicsSoccer-3v3-v0", render_mode="human")
+# ---------------------------------------------------------------------------
+def make_3v3(render_mode=None, **kwargs):
+    return SoccerEnv(SoccerEnvConfig(n_players_per_team=3), render_mode=render_mode, **kwargs)
+
+
+def make_2v2(render_mode=None, **kwargs):
+    return SoccerEnv(SoccerEnvConfig(n_players_per_team=2), render_mode=render_mode, **kwargs)

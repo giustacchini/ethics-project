@@ -7,6 +7,7 @@ from enums import MovementActions, SoccerActionType
 from soccer.agent import SoccerAgentRole
 from soccer.ball import CustomBall
 from soccer.env import SoccerEnv, SoccerEnvConfig
+from soccer.rendering import TEAM_COLORS, render_soccer_frame
 
 
 def carded_foul(env, offender_id, target_id, monkeypatch):
@@ -100,6 +101,10 @@ def test_suspended_players_are_not_obstacles_receivers_or_rendered():
     env.reset(seed=0)
     old_position = env.agents[2].state.pos
     env._apply_red_card(2)
+    # A suspended player is not drawn: no team-0 body colour on its old cell.
+    tile = render_soccer_frame(env, 16)[old_position[1] * 16:(old_position[1] + 1) * 16,
+                                        old_position[0] * 16:(old_position[0] + 1) * 16]
+    assert not np.any(np.all(tile == TEAM_COLORS[0], axis=-1))
     env.agents[4].state.pos = (4, 7)
     env.ball = CustomBall(position=(4, 7), carrier_id=4, last_possessing_team=1)
     actions = {a.index: MovementActions.DO_NOTHING for a in env.active_players}
@@ -111,9 +116,6 @@ def test_suspended_players_are_not_obstacles_receivers_or_rendered():
     assert obs[0]['suspended'][2] == 1
     assert not terms[2]
     assert env.observation_space.contains(obs)
-    image = env.grid.render(tile_size=16, agents=[env.agents[2]])
-    empty = env.grid.render(tile_size=16, agents=[])
-    assert np.array_equal(image, empty)
     env.reset(seed=0)
     assert all(not a.suspended for a in env.agents)
 

@@ -11,10 +11,9 @@ class RewardResult:
 
     individual: rewards for each agent.
     team_of_agent: team of each agent. Agents with the same value belong
-        to the same team. None means no team (all snowplows).
+        to the same team. None means no team.
     shared_by_team: reward/penalty that belongs to no single agent, but is shared by all agents in one team.
-        e.g. collision, all streets cleaned.
-        OBS: in snowplows team is None, so shared_by_team[None] is the shared reward for all snowplows.
+        e.g. the match outcome in soccer.
     """
 
     individual: dict[AgentID, float]
@@ -48,7 +47,7 @@ class EventRewardCalculator(RewardStrategy):
     Events in shared_events go to the shared reward of a team.
 
     The team is event.team_id if set, otherwise the agent's team in
-    team_of_agent. None means no team (e.g. snowplows).
+    team_of_agent. None means no team.
     """
 
     def __init__(
