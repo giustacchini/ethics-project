@@ -58,7 +58,7 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
             max_steps=self.config.max_steps if max_steps is None else max_steps,
             render_mode=render_mode, allow_agent_overlap=False, highlight=False,
         )
-        self.reward_calculator = make_soccer_reward_calculator()
+        self.reward_calculator = make_soccer_reward_calculator(self.config.rewards)
         self.reward_range = (-1000, 1000)
         self.observation_provider = SoccerObservationProvider()
         for agent in self.agents:
@@ -257,6 +257,8 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
             'position': tuple(position), 'transition': self.step_count, 'reason': reason,
         }
         self.pending_goal = deepcopy(self.last_goal)
+        self.reward_events.emit(SoccerEvent.GOAL_SCORED, team_id=scoring_team, step=self.step_count)
+        self.reward_events.emit(SoccerEvent.GOAL_CONCEDED, team_id=1 - scoring_team, step=self.step_count)
         if self.ball is not None:
             self.ball.position = tuple(position)
             self.ball.remaining_trajectory.clear()

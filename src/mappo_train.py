@@ -30,6 +30,7 @@ class TrainingConfig:
     gamma: float = 0.99
     gae_lambda: float = 0.95
     reward_scale: float = 0.001
+    rewards: str = 'v1'
     epochs: int = 4
     minibatches: int = 4
     training_team: int = 0
@@ -54,7 +55,7 @@ def train(config):
     metrics_path = directory / 'metrics.jsonl'
     if metrics_path.exists() or (directory / 'matches.jsonl').exists() or any(directory.glob('update_*.pt')):
         raise FileExistsError(f'Training output already contains a run: {directory}; choose a new output directory')
-    env_config = SoccerEnvConfig(n_players_per_team=config.team_size, max_steps=config.max_steps)
+    env_config = SoccerEnvConfig(n_players_per_team=config.team_size, max_steps=config.max_steps, rewards=config.rewards)
     env = SoccerEnv(env_config, event_log_path=directory / 'matches.jsonl')
     try:
         observations, _ = env.reset(seed=config.seed)
@@ -103,6 +104,7 @@ def main():
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--gae-lambda', type=float, default=0.95)
     parser.add_argument('--reward-scale', type=float, default=0.001)
+    parser.add_argument('--rewards', type=str, default='v1', choices=('v1', 'v2'))
     parser.add_argument('--device', default='auto', help='auto, cpu, cuda[:index], or mps')
     parser.add_argument('--output', default='checkpoints/mappo')
     parser.add_argument('--self-play', action='store_true')

@@ -88,4 +88,16 @@ def test_goals_reward_only_the_match_winning_transition(size, winner):
         for agent in env.agents:
             expected = (1000 if agent.team_index == winner else -1000) if goal == 2 else 0
             assert rewards[agent.index] == expected
-        assert len(env.reward_events.events()) == (2 if goal == 2 else 0)
+
+        types = [event.type for event in env.reward_events.events()]
+        assert types.count(SoccerEvent.GOAL_SCORED) == types.count(SoccerEvent.GOAL_CONCEDED) == 1
+        match_events = {SoccerEvent.MATCH_WIN, SoccerEvent.MATCH_LOSS, SoccerEvent.MATCH_DRAW}
+        assert sum(t in match_events for t in types) == (2 if goal == 2 else 0)
+
+def test_v2_rewards_goals_for_both_teams():
+    env = SoccerEnv(SoccerEnvConfig(rewards='v2'))
+    env.reset(seed=0)
+    env.reward_events.clear()
+    env._award_goal(0, (15, 5))
+    env._transition_rewards()
+    assert env.last_team_rewards == {0: 100.0, 1: -100.0}
