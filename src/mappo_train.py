@@ -29,6 +29,7 @@ class TrainingConfig:
     learning_rate: float = 3e-4
     gamma: float = 0.99
     gae_lambda: float = 0.95
+    reward_scale: float = 0.001
     epochs: int = 4
     minibatches: int = 4
     training_team: int = 0
@@ -42,6 +43,8 @@ def train(config):
         raise ValueError('Training counts and dimensions must be positive')
     if config.training_team not in (0, 1) or config.learning_rate <= 0:
         raise ValueError('Invalid training team or learning rate')
+    if config.reward_scale <= 0:
+        raise ValueError('Reward scale must be positive')
     if not 0 <= config.gamma <= 1 or not 0 <= config.gae_lambda <= 1:
         raise ValueError('Discount and GAE lambda must be in [0, 1]')
     device = resolve_device(config.device)
@@ -68,6 +71,9 @@ def train(config):
             losses = {}
             for team in training_teams:
                 data = buffers[team].as_tensors()
+                # Scale rewards (±1000 -> ±1) so the critic learns stable values.
+                # Only changes the size of the numbers, not what is rewarded.
+                data['rewards'] = data['rewards'] * config.reward_scale
                 advantages, returns = compute_advantages(data['rewards'], data['values'], data['dones'],
                                                          bootstrap[team], config.gamma, config.gae_lambda)
                 pair = teams[team]
@@ -96,6 +102,7 @@ def main():
     parser.add_argument('--learning-rate', type=float, default=3e-4)
     parser.add_argument('--gamma', type=float, default=0.99)
     parser.add_argument('--gae-lambda', type=float, default=0.95)
+    parser.add_argument('--reward-scale', type=float, default=0.001)
     parser.add_argument('--device', default='auto', help='auto, cpu, cuda[:index], or mps')
     parser.add_argument('--output', default='checkpoints/mappo')
     parser.add_argument('--self-play', action='store_true')

@@ -7,7 +7,7 @@ from algorithms.mappo.device import resolve_device, seed_everything
 from algorithms.mappo.experience_collector import ExperienceCollector
 from algorithms.mappo.mappo_update import ppo_update
 from algorithms.mappo.teams import create_teams
-from algorithms.mappo.train import TrainingConfig, train
+from mappo_train import TrainingConfig, train
 from soccer.config import SoccerEnvConfig
 from soccer.encoding import encode_team
 from soccer.env import SoccerEnv
