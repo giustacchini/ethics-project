@@ -7,7 +7,7 @@ from pathlib import Path
 
 import torch
 
-from algorithms.mappo.checkpoints import save_checkpoint
+from algorithms.mappo.checkpoints import load_checkpoint, save_checkpoint
 from algorithms.mappo.compute_gae import compute_advantages
 from algorithms.mappo.device import resolve_device, seed_everything
 from algorithms.mappo.experience_collector import ExperienceCollector
@@ -36,11 +36,14 @@ class TrainingConfig:
     training_team: int = 0
     self_play: bool = False
     device: str = 'auto'
-    output: str = 'checkpoints/mappo'
+    output: str | None = None
+    checkpoint_interval: int = 1
+    resume: str | None = None
 
 
 def train(config):
-    if min(config.updates, config.rollout_steps, config.max_steps, config.epochs, config.minibatches, config.hidden) < 1:
+    if min(config.updates, config.rollout_steps, config.max_steps, config.epochs, config.minibatches,
+           config.hidden, config.checkpoint_interval) < 1:
         raise ValueError('Training counts and dimensions must be positive')
     if config.training_team not in (0, 1) or config.learning_rate <= 0:
         raise ValueError('Invalid training team or learning rate')
@@ -49,25 +52,45 @@ def train(config):
     if not 0 <= config.gamma <= 1 or not 0 <= config.gae_lambda <= 1:
         raise ValueError('Discount and GAE lambda must be in [0, 1]')
     device = resolve_device(config.device)
-    seed_everything(config.seed)
-    directory = Path(config.output)
+    resume_payload = load_checkpoint(config.resume, device) if config.resume else None
+    run_seed = resume_payload['seed'] if resume_payload else config.seed
+    seed_everything(run_seed)
+    directory = Path(config.output or (Path(config.resume).parent if config.resume else 'checkpoints/mappo'))
     directory.mkdir(parents=True, exist_ok=True)
     metrics_path = directory / 'metrics.jsonl'
-    if metrics_path.exists() or (directory / 'matches.jsonl').exists() or any(directory.glob('update_*.pt')):
+    if not resume_payload and (metrics_path.exists() or (directory / 'matches.jsonl').exists()
+                               or any(directory.glob('update_*.pt'))):
         raise FileExistsError(f'Training output already contains a run: {directory}; choose a new output directory')
-    env_config = SoccerEnvConfig(n_players_per_team=config.team_size, max_steps=config.max_steps, rewards=config.rewards, shaping_gamma=config.gamma)
-    env = SoccerEnv(env_config, event_log_path=directory / 'matches.jsonl')
+    env_config = (SoccerEnvConfig(**resume_payload['env_config']) if resume_payload else
+                  SoccerEnvConfig(n_players_per_team=config.team_size, max_steps=config.max_steps,
+                                  rewards=config.rewards, shaping_gamma=config.gamma))
+    env = SoccerEnv(env_config, event_log_path=directory / 'matches.jsonl',
+                    event_log_append=bool(resume_payload))
     try:
-        observations, _ = env.reset(seed=config.seed)
-        _, obs, state, _ = encode_team(observations, 0, max_steps=config.max_steps)
-        network_config = dict(obs_size=obs.shape[-1], state_size=state.size,
-                              n_players=config.team_size * 2, hidden=config.hidden)
+        observations, _ = env.reset(seed=run_seed)
+        _, obs, state, _ = encode_team(observations, 0, max_steps=env_config.max_steps)
+        network_config = (dict(resume_payload['network_config']) if resume_payload else
+                          dict(obs_size=obs.shape[-1], state_size=state.size,
+                               n_players=config.team_size * 2, hidden=config.hidden))
         teams = create_teams(**network_config, learning_rate=config.learning_rate, device=device)
-        training_teams = (0, 1) if config.self_play else (config.training_team,)
-        collector = ExperienceCollector(env, teams, training_teams, config.seed)
+        if resume_payload:
+            for team, pair_state in resume_payload['teams'].items():
+                teams[int(team)].actor.load_state_dict(pair_state['actor'])
+                teams[int(team)].critic.load_state_dict(pair_state['critic'])
+                teams[int(team)].actor_optimizer.load_state_dict(pair_state['actor_optimizer'])
+                teams[int(team)].critic_optimizer.load_state_dict(pair_state['critic_optimizer'])
+            training_teams = tuple(resume_payload['training_teams'])
+            start_update = resume_payload['update']
+        else:
+            training_teams = (0, 1) if config.self_play else (config.training_team,)
+            start_update = 0
+        collector = ExperienceCollector(env, teams, training_teams, run_seed)
         metrics = []
-        print(f'Device: {device}; training teams: {training_teams}; {config.team_size}v{config.team_size}', flush=True)
-        for update in range(1, config.updates + 1):
+        team_size = env_config.n_players_per_team
+        print(f'Device: {device}; training teams: {training_teams}; {team_size}v{team_size}', flush=True)
+        checkpoint = None
+        final_update = start_update + config.updates
+        for update in range(start_update + 1, final_update + 1):
             buffers, bootstrap, completed = collector.collect(config.rollout_steps)
             losses = {}
             for team in training_teams:
@@ -85,11 +108,14 @@ def train(config):
                           device=str(device), losses=losses, completed_matches=completed)
             with metrics_path.open('a') as stream:
                 stream.write(json.dumps(record) + '\n')
-            checkpoint = directory / f'update_{update:04d}.pt'
-            save_checkpoint(checkpoint, teams, env_config, network_config, config.seed, update,
-                            training_teams, training_config=asdict(config))
             metrics.append(record)
-            print(f'Update {update}: completed {len(completed)} matches; saved {checkpoint}', flush=True)
+            if update % config.checkpoint_interval == 0 or update == final_update:
+                checkpoint = directory / f'update_{update:04d}.pt'
+                save_checkpoint(checkpoint, teams, env_config, network_config, run_seed, update,
+                                training_teams, training_config=asdict(config))
+                print(f'Update {update}: completed {len(completed)} matches; saved {checkpoint}', flush=True)
+            else:
+                print(f'Update {update}: completed {len(completed)} matches', flush=True)
         return dict(teams=teams, metrics=metrics, device=device, checkpoint=checkpoint)
     finally:
         env.close()
@@ -106,7 +132,11 @@ def main():
     parser.add_argument('--reward-scale', type=float, default=0.001)
     parser.add_argument('--rewards', type=str, default='v1', choices=('v1', 'v2', 'v3'))
     parser.add_argument('--device', default='auto', help='auto, cpu, cuda[:index], or mps')
-    parser.add_argument('--output', default='checkpoints/mappo')
+    parser.add_argument('--output', default=None)
+    parser.add_argument('--checkpoint-interval', type=int, default=1,
+                        help='save a checkpoint every N updates; the final update is always saved')
+    parser.add_argument('--resume', metavar='CHECKPOINT',
+                        help='resume training from a checkpoint and continue for --updates more updates')
     parser.add_argument('--self-play', action='store_true')
     parser.add_argument('--torch-threads', type=int, default=1)
     args = parser.parse_args()

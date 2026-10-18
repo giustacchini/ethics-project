@@ -66,6 +66,10 @@ source .venv/bin/activate
 PYTHONPATH=src python -m algorithms.mappo.train --team-size 3 --device auto --output checkpoints/random_seed0
 # Both independent teams learn from the same joint transitions.
 PYTHONPATH=src python -m algorithms.mappo.train --team-size 3 --self-play --device auto --output checkpoints/selfplay_seed0
+# Save every five updates; the final update is always saved.
+PYTHONPATH=src python -m algorithms.mappo.train --updates 20 --checkpoint-interval 5 --output checkpoints/interval_seed0
+# Resume for ten additional updates from an existing checkpoint.
+PYTHONPATH=src python -m algorithms.mappo.train --resume checkpoints/interval_seed0/update_0020.pt --updates 10
 # Watch the last checkpoint (add --self-play for a self-play checkpoint).
 PYTHONPATH=src python -m soccer.watch checkpoints/random_seed0/update_0010.pt --device auto
 # Evaluate without opening a window.
@@ -73,7 +77,9 @@ PYTHONPATH=src python -m soccer.watch checkpoints/random_seed0/update_0010.pt --
 ```
 
 Use distinct output directories/seeds for independent experiments. Existing
-run outputs/checkpoints are not overwritten. Defaults are startup settings,
+run outputs/checkpoints are not overwritten for new runs. Resume defaults to
+the checkpoint's directory and continues checkpoint numbering; use `--output`
+to select another directory. Defaults are startup settings,
 not validated training optima; rewards are sparse and smoke tests do not
 establish learning quality. Train 2v2 and 3v3 independently using --team-size.
 --training-team chooses 0 or 1 against random; --self-play trains both.
@@ -91,8 +97,12 @@ Each update writes metrics.jsonl records and a versioned checkpoint containing
 both network pairs, optimizer states, training/environment/network configuration,
 encoding version, seed and update number. Watching checks schema compatibility
 and refuses untrained team selections. Old flat-action checkpoints are not
-compatible. Checkpoints support evaluation; exact mid-match training resume
-is not implemented (collector/RNG/rollout state is not saved).
+compatible. Checkpoints support evaluation and training resume. Resume starts
+a fresh environment rollout from the saved network and optimizer state; exact
+mid-match continuation is not implemented (collector/RNG/rollout state is not
+saved). `--updates` means additional updates when resuming.
+`--checkpoint-interval` controls periodic saves, and the final update is
+always saved.
 
 ## GPU support
 

@@ -127,6 +127,23 @@ def test_training_checkpoint_and_headless_watch(tmp_path, self_play, size):
         train(config)
 
 
+def test_checkpoint_interval_and_resume(tmp_path):
+    output = tmp_path / 'run'
+    config = TrainingConfig(team_size=2, updates=3, rollout_steps=2, max_steps=2,
+                            epochs=1, minibatches=1, hidden=8, device='cpu',
+                            checkpoint_interval=2, output=str(output))
+    result = train(config)
+    assert result['checkpoint'].name == 'update_0003.pt'
+    assert (output / 'update_0002.pt').exists()
+    assert not (output / 'update_0001.pt').exists()
+
+    resumed = train(TrainingConfig(updates=1, rollout_steps=2, max_steps=2, epochs=1,
+                                   minibatches=1, hidden=8, device='cpu',
+                                   checkpoint_interval=1, resume=str(result['checkpoint'])))
+    assert resumed['checkpoint'].name == 'update_0004.pt'
+    assert len(resumed['metrics']) == 1
+
+
 @pytest.mark.parametrize('device', ['cpu'] + (['cuda'] if torch.cuda.is_available() else [])
                          + (['mps'] if torch.backends.mps.is_available() else []))
 def test_rollout_and_update_tensors_stay_on_selected_device(device):

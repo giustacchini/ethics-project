@@ -23,16 +23,28 @@ def json_value(value):
 class MatchLog:
     """Keep current-match history; optionally stream every record to JSONL."""
 
-    def __init__(self, path=None, show_events=False):
+    def __init__(self, path=None, show_events=False, append=False):
         self.show_events = show_events
         self.path = None if path is None else Path(path)
         if self.path is not None:
             self.path.parent.mkdir(parents=True, exist_ok=True)
-            # Exclusive creation prevents mixing independent runs.
-            with self.path.open('x'):
-                pass
-        self.match = 0
+            if not append:
+                # Exclusive creation prevents mixing independent runs.
+                with self.path.open('x'):
+                    pass
+        self.match = self._last_match() if append and self.path is not None else 0
         self.records = []
+
+    def _last_match(self):
+        try:
+            with self.path.open() as stream:
+                last = None
+                for line in stream:
+                    if line.strip():
+                        last = json.loads(line)
+            return last.get('match', 0) if last else 0
+        except FileNotFoundError:
+            return 0
 
     def emit(self, kind, step, **data):
         record = json_value(dict(schema_version=1, match=self.match, step=step, type=kind, **deepcopy(data)))

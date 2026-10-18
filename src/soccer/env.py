@@ -28,9 +28,10 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
     # Integer actions: wait, up, down, right, left, then four diagonals.
     movement_actions = tuple(MovementActions)
 
-    def __init__(self, config=None, width=16, height=11, max_steps=None, render_mode=None, event_log_path=None, show_events=False, render_fps: int =20):
+    def __init__(self, config=None, width=16, height=11, max_steps=None, render_mode=None,
+                 event_log_path=None, show_events=False, render_fps: int = 20, event_log_append=False):
         self.metadata["render_fps"] = render_fps
-        self.match_log = MatchLog(event_log_path, show_events=show_events)
+        self.match_log = MatchLog(event_log_path, show_events=show_events, append=event_log_append)
         self.config = config if config is not None else SoccerEnvConfig()
         if self.config.n_players_per_team not in (2, 3):
             raise ValueError("Soccer supports 2 or 3 players per team")
