@@ -1,1 +1,7 @@
 pytest
+pytest-cov
+mosaic-multigrid
+pillow
+gymnasium
+numpy
+torch>=2.2,<3

@@ -124,3 +124,23 @@ def test_function_error_case():
         function_to_test(invalid_input)
     assert str(exc_info.value) == "Input must be non-negative"
 ```
+
+## Current project commands
+
+From the repository root, activate the environment containing the dependencies:
+
+```bash
+source .venv/bin/activate
+pytest
+```
+
+`pytest.ini` supplies the source path. Plain `pytest` runs every shared and
+soccer test, including the real MultiGrid integration tests. It does not
+exclude legacy failures or require manual source-path manipulation. Coverage
+can be enabled explicitly with `pytest --cov=src --cov-report=term-missing`.
+
+Shared-backbone code (`src/shared/`) is exercised through the soccer tests,
+since soccer is its only user. Rendering tests (`test_soccer_rendering.py`)
+compare rendered tile pixels, so they need no window or display. Soccer
+complete-match validator tests import the headless runner from
+`validate_matches`.
