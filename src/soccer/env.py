@@ -14,7 +14,7 @@ from shared.movement import build_movement_intentions, validate_proposed_moves, 
 from soccer.agent import SoccerAgent, SoccerAgentRole
 from soccer.ball import CustomBall
 from soccer.rendering import render_soccer_frame
-from soccer.rewards import make_soccer_reward_calculator
+from soccer.rewards import make_soccer_reward_calculator, SHAPED_PRESETS, approach_shaping, team_potential
 from soccer.config import SoccerEnvConfig
 from soccer.ball_rules import BallRules
 from soccer.discipline import DisciplineRules
@@ -106,6 +106,7 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
         self.ball = CustomBall(position=position) if position is not None else None
         if self.ball is not None:
             self.grid.set(*self.ball.position, self.ball)
+        self.potentials = {team: team_potential(self, team) for team in (0, 1)}
 
     def _reset_formation(self, restore_suspended=True):
         """Restore players without resetting scores, elapsed time or events."""
@@ -277,6 +278,14 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
         self.last_team_rewards = {
             team: self.last_reward_result.team_total(team) for team in (0, 1)
         }
+
+        if self.config.rewards in SHAPED_PRESETS:
+            for team in (0, 1):
+                after = team_potential(self, team)
+                self.last_team_rewards[team] += approach_shaping(
+                    self.potentials[team], after, self.match_over, self.config.shaping_gamma)
+                self.potentials[team] = after
+                
         # Repeat each team's single aggregate through the per-agent API.
         return {a.index: self.last_team_rewards[a.team_index] for a in self.agents}
 

@@ -13,4 +13,6 @@ class SoccerEnvConfig:
     goal_rows: tuple[int, ...] = (4, 5, 6)
     # Reward experiment: 'v1 match outcome only, 'v2' adds goals.
     rewards: str = 'v1'
+    # Discount used by the v3 shaping; must equal the training gamma.
+    shaping_gamma: float = 0.99
 
