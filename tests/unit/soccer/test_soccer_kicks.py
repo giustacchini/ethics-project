@@ -1,6 +1,6 @@
 import pytest
 
-from soccer.ball import build_trajectory
+from soccer.entities.ball import build_trajectory
 
 
 @pytest.mark.parametrize('start,target,expected', [
@@ -15,8 +15,8 @@ def test_bresenham_trajectory(start, target, expected):
     assert build_trajectory(start, target) == expected
 
 from enums import MovementActions, SoccerActionType
-from soccer.agent import SoccerAgentRole
-from soccer.ball import CustomBall
+from soccer.entities.agent import SoccerAgentRole
+from soccer.entities.ball import CustomBall
 from soccer.env import SoccerEnv
 
 

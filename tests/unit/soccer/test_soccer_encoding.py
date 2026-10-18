@@ -3,7 +3,7 @@ from copy import deepcopy
 import numpy as np
 import pytest
 
-from soccer.encoding import encode_team, obs_to_vector, state_to_vector
+from soccer.observation.encoding import encode_team, obs_to_vector, state_to_vector
 from soccer.env import SoccerEnv, SoccerEnvConfig
 
 

@@ -3,10 +3,10 @@ from unittest.mock import Mock
 import pytest
 
 from enums import MovementActions, SoccerActionType
-from soccer.agent import SoccerAgentRole
-from soccer.ball import CustomBall
+from soccer.entities.agent import SoccerAgentRole
+from soccer.entities.ball import CustomBall
 from soccer.env import SoccerEnv
-from soccer.rendering import keeper_area_cells
+from soccer.rendering.pitch import keeper_area_cells
 
 
 def arrange(team=1, temporary=False, goal=True):

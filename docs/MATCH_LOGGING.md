@@ -1,7 +1,8 @@
 # Match traces and fair-play analysis
 
-Training writes `matches.jsonl` alongside metrics and checkpoints. For playback,
-pass `--event-log path/to/new-matches.jsonl` to `python -m soccer.watch`.
+Training writes `matches.jsonl` alongside metrics and checkpoints. Playback
+automatically saves its trace and statistics in a unique `evaluations/` folder;
+`--event-log` is an optional override for the trace path.
 Direct environment users can pass `event_log_path` to `SoccerEnv`.
 Files are created exclusively: choose a new path for each run.
 Without a file, `env.match_log.records` retains only the current match in memory.
@@ -57,9 +58,8 @@ Use `--show-events` to print events live, excluding the bulky action/state rows.
 File logs still include those rows. Both outputs are optional and independent.
 
 ```bash
-python src/main.py --show-events --event-log logs/main.jsonl
-PYTHONPATH=src python -m soccer.watch checkpoints/run1/update_0010.pt --show-events --event-log logs/watch.jsonl
-PYTHONPATH=src python -m soccer.validate_matches --show-events --event-log-dir logs/validation
+python src/watch.py checkpoints/run1/update_0010.pt --show-events --event-log logs/watch.jsonl
+python src/validate_matches.py --show-events --event-log-dir logs/validation
 ```
 
 Validation writes files named `2v2_seed0.jsonl`, etc. Only the first execution
@@ -73,7 +73,7 @@ Evaluate any compatible existing checkpoint, then summarize its trace:
 
 ```bash
 python src/watch.py checkpoints/run1/update_0010.pt --headless --matches 20 --event-log logs/evaluation.jsonl
-PYTHONPATH=src python -m soccer.statistics logs/evaluation.jsonl --output logs/statistics.json
+PYTHONPATH=src python -m soccer.evaluation.statistics logs/evaluation.jsonl --output logs/statistics.json
 ```
 
 Main, watch, and validation now include per-match team statistics in their
@@ -96,3 +96,28 @@ counts may include forced-wait selections. Inspect `decision_context_available`
 before comparing request counts across old and new traces. Undefined rates are
 `null`, never zero or NaN. Incomplete matches are counted separately and excluded
 from every aggregate. No weighted fair-play score has been introduced.
+
+## Automatic playback evaluation runs
+
+`python src/watch.py CHECKPOINT --headless --matches 20 --show-events` now
+creates a unique timestamped folder under `evaluations/` automatically. It saves:
+
+- `events.jsonl`: the complete trace for every match in the run.
+- `evaluation.json`: checkpoint, training/evaluation seed, team/opponent, device,
+  environment configuration, requested match count and trace path.
+- `statistics.json`: relevant discipline/aggression and competitive measurements,
+  with `per_match` results plus per-team `totals`, `averages_per_match`, exposure
+  denominators and normalized `rates` for all completed matches together.
+
+No extra statistics command or log filename is required. `--output-root` changes
+the parent folder; unique names prevent collisions. The optional legacy
+`--event-log` override places the trace at that explicit path while the metadata
+and statistics stay in the automatic run folder. Reports are also finalized when
+playback is interrupted; unfinished matches are counted separately and excluded.
+
+`--show-events` prints readable match boundaries, scores, fouls, cards, restarts,
+completed passes, possession transfers and triggered dives. Invalid requests and
+full action/state data remain available in the structured trace. Goal messages
+identify the scoring team and score; a player scorer is not guessed when the
+trace does not provide reliable attribution. No reward changes or weighted
+fair-play score are introduced.

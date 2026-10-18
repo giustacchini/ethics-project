@@ -9,7 +9,7 @@ from enums import SoccerActionType
 
 COUNTERS = ('active_player_transitions', 'decision_opportunities', 'aggressive_tackle_requests',
             'aggressive_move_requests', 'resolved_challenges', 'resolved_aggressive_challenges',
-            'fouls', 'red_cards', 'penalties_conceded', 'automatic_goals_conceded',
+            'fouls', 'red_cards', 'penalties_conceded', 'goals_conceded_due_to_too_few_players_on_pitch',
             'goals_scored', 'goals_conceded', 'wins', 'draws', 'losses')
 
 
@@ -59,7 +59,7 @@ def match_counts(records):
         elif kind == 'restart' and details['type'] == 'penalty':
             counts[1 - details['team']]['penalties_conceded'] += 1
         elif kind == 'goal' and details['reason'] == 'one_active_player':
-            counts[details['conceding_team']]['automatic_goals_conceded'] += 1
+            counts[details['conceding_team']]['goals_conceded_due_to_too_few_players_on_pitch'] += 1
         elif kind == 'tackle' and details['status'] in ('success', 'failed', 'foul'):
             challenges[row['step'], row['player']] = details['intensity'] == 'aggressive'
         elif kind == 'loose_ball_contest':
@@ -112,11 +112,34 @@ def summarize(records):
                 teams={team: rates(c, len(matches)) for team, c in totals.items()})
 
 
-def main():
+# Measurements retained in the evaluation report; model losses/rewards stay elsewhere.
+EVALUATION_COUNTS = ('fouls', 'red_cards', 'penalties_conceded', 'goals_conceded_due_to_too_few_players_on_pitch',
+                     'aggressive_tackle_requests', 'aggressive_move_requests',
+                     'resolved_challenges', 'resolved_aggressive_challenges',
+                     'goals_scored', 'goals_conceded', 'wins', 'draws', 'losses')
+
+
+def evaluation_report(summary):
+    def project(team, matches):
+        return dict(totals={key: team[key] for key in EVALUATION_COUNTS},
+                    averages_per_match={key: ratio(team[key], matches) for key in EVALUATION_COUNTS},
+                    exposure={key: team[key] for key in ('active_player_transitions', 'decision_opportunities')},
+                    rates={key: value for key, value in team.items()
+                           if key.endswith('_per_1000_active_player_transitions') or key == 'aggressive_challenge_fraction'})
+    return dict(statistics_version=summary['statistics_version'],
+                completed_matches=summary['completed_matches'], incomplete_matches=summary['incomplete_matches'],
+                decision_context_available=summary['decision_context_available'],
+                per_match=[dict(match=m['match'], transitions=m['transitions'],
+                                teams={team: project(c, 1) for team, c in m['teams'].items()})
+                           for m in summary['matches']],
+                teams={team: project(c, summary['completed_matches']) for team, c in summary['teams'].items()})
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('trace', type=Path)
     parser.add_argument('--output', type=Path)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     with args.trace.open() as stream:
         report = summarize(json.loads(line) for line in stream if line.strip())
     text = json.dumps(report, indent=2, allow_nan=False) + '\n'

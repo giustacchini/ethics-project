@@ -143,4 +143,4 @@ Shared-backbone code (`src/shared/`) is exercised through the soccer tests,
 since soccer is its only user. Rendering tests (`test_soccer_rendering.py`)
 compare rendered tile pixels, so they need no window or display. Soccer
 complete-match validator tests import the headless runner from
-`soccer.validate_matches`.
+`validate_matches`.

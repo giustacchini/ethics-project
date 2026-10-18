@@ -1,7 +1,7 @@
 """BallRules: cohesive rules operating on the shared SoccerEnv state."""
 
-from soccer.agent import SoccerAgentRole
-from soccer.ball import build_trajectory
+from soccer.entities.agent import SoccerAgentRole
+from soccer.entities.ball import build_trajectory
 
 
 class BallRules:

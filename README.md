@@ -16,7 +16,7 @@ pytest
 `pytest`; a system-wide installation may use a different Python without the
 project dependencies. Coverage is optional: `pytest --cov=src`.
 
-Run the visual demo with `python src/main.py --seed 0`. The env can also be
+The environment can also be
 created by id, like the original Mosaic ones (`import soccer` registers the ids):
 
 ```python
@@ -24,29 +24,37 @@ import soccer, gymnasium as gym
 env = gym.make("EthicsSoccer-3v3-v0", render_mode="human")  # or EthicsSoccer-2v2-v0
 ```
 
-Save a picture of the current state with `soccer.rendering.save_frame(env, 'pitch.png')`.
+Save a picture of the current state with `soccer.rendering.pitch.save_frame(env, 'pitch.png')`.
 
 Run reproducible headless matches with:
 
 ```bash
-PYTHONPATH=src python -m soccer.validate_matches --seeds 5 --output /tmp/soccer-validation.json
+python src/validate_matches.py --seeds 5 --output /tmp/soccer-validation.json
 ```
 
 Source organization:
 
-- `src/enums.py`: action and event enums.
-- `src/shared/`: domain-independent movement stages, grid helpers, events, rewards and the observation interface.
-- `src/soccer/config.py`: match configuration.
-- `src/soccer/env.py`: match state and transition orchestration.
-- `src/soccer/observations.py`: full structured observations and their spaces.
-- `src/soccer/ball_rules.py`: kicks, possession and dives.
-- `src/soccer/discipline.py`: tackles, suspensions and restarts.
-- `src/soccer/agent.py`, `ball.py`: domain objects (players and ball).
-- `src/soccer/rendering.py`: pitch drawing in the original Mosaic soccer style
-  (striped grass, markings, net goals, red ball). Goalkeepers are squares and
-  field players are triangles. It only reads the env; it never changes game state.
-- `src/soccer/validate_matches.py`: complete-match invariants and replay checks.
-- `tests/unit/shared/` and `tests/unit/soccer/`: tests organized by domain.
+```text
+src/
+├── watch.py                 # checkpoint playback and automatic evaluation
+├── mappo_train.py           # training workflow
+├── validate_matches.py      # complete-match invariants and replay checks
+├── enums.py
+├── algorithms/mappo/        # networks, rollouts, PPO, checkpoints and devices
+├── shared/                  # environment-independent utilities
+└── soccer/
+    ├── env.py               # match state and orchestration
+    ├── config.py
+    ├── entities/            # players and ball
+    ├── rules/               # movement, ball rules, discipline and rewards
+    ├── observation/         # full-state observations and network encoding
+    ├── rendering/           # pitch drawing
+    └── evaluation/          # event logging and fair-play statistics
+```
+
+Use `python src/watch.py --help`, `python src/mappo_train.py --help`, or
+`python src/validate_matches.py --help` for the workflow options. Each workflow
+has one implementation; no duplicate package scripts or demo are retained.
 
 The ball and discipline classes supply rule methods directly to `SoccerEnv`;
 they do not keep separate copies of match state or add delegation wrappers.
@@ -56,8 +64,8 @@ they do not keep separate copies of match state or add delegation wrappers.
 
 ```bash
 source .venv/bin/activate
-PYTHONPATH=src python -m algorithms.mappo.train --device auto --output checkpoints/run1
-PYTHONPATH=src python -m soccer.watch checkpoints/run1/update_0010.pt --headless --device cpu
+python src/mappo_train.py --device auto --output checkpoints/run1
+python src/watch.py checkpoints/run1/update_0010.pt --headless --device cpu
 ```
 
 The default trains Team 0 against random. Add `--self-play` to train both
@@ -65,3 +73,7 @@ independent actor/critic pairs. Set `--team-size 2` for a separate 2v2 run.
 Devices include `auto`, `cpu`, `cuda[:index]` and `mps`; accelerator execution
 requires a compatible PyTorch build and hardware. See
 [MAPPO integration](docs/MAPPO_INTEGRATION.md) for rollout, checkpoint and GPU details.
+
+Playback automatically creates a unique folder under `evaluations/` containing
+`events.jsonl`, `evaluation.json`, and `statistics.json`. See
+[match logging and statistics](docs/MATCH_LOGGING.md).

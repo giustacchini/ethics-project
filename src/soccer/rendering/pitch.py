@@ -36,7 +36,7 @@ import pygame
 import pygame.freetype
 from mosaic_multigrid.core.world_object import Ball
 
-from soccer.agent import SoccerAgentRole
+from soccer.entities.agent import SoccerAgentRole
 
 # ---------------------------------------------------------------------------
 # Palette (copied from mosaic_multigrid.rendering.fifa so the look matches, but

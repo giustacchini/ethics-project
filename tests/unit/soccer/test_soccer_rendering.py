@@ -8,9 +8,9 @@ import gymnasium as gym
 
 import soccer  # noqa: F401  (registers the EthicsSoccer-* ids)
 from enums import MovementActions
-from soccer.agent import SoccerAgentRole
+from soccer.entities.agent import SoccerAgentRole
 from soccer.env import SoccerEnv, SoccerEnvConfig
-from soccer.rendering import (
+from soccer.rendering.pitch import (
     BALL_COLOR, TEAM_COLORS, keeper_area_cells, render_soccer_frame,
 )
 

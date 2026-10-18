@@ -2,8 +2,8 @@
 
 from copy import deepcopy
 
-from soccer.agent import SoccerAgentRole
-from soccer.ball import CustomBall
+from soccer.entities.agent import SoccerAgentRole
+from soccer.entities.ball import CustomBall
 from mosaic_multigrid.core import Grid
 
 
@@ -24,7 +24,7 @@ class DisciplineRules:
         if len(teammates) <= 1:
             if defer_concession:
                 return False
-            self._automatic_concession(offender.team_index)
+            self._goal_by_forfait(offender.team_index)
             return True
         if was_keeper:
             goal = (0 if offender.team_index == 0 else 15, 5)
@@ -157,15 +157,15 @@ class DisciplineRules:
             occupied.add(destination)
         return positions
 
-    def _neutral_restart(self, restore_suspended=False):
+    def _no_goal_restart(self, restore_suspended=False):
         self._reset_formation(restore_suspended=restore_suspended)
         self.ball = CustomBall(position=(7 + int(self.np_random.integers(2)), 5))
         self.grid.set(*self.ball.position, self.ball)
-        self.last_restart = {'type': 'neutral', 'position': self.ball.position}
+        self.last_restart = {'type': 'no_goal_restart', 'position': self.ball.position}
 
-    def _automatic_concession(self, team):
+    def _goal_by_forfait(self, team):
         """Award one goal with a consistent final ball state and no restart."""
-        self.last_restart = {'type': 'automatic_goal', 'team': 1 - team}
+        self.last_restart = {'type': 'goal_by_forfait', 'team': 1 - team}
         self.grid = Grid(self.width, self.height)
         for agent in self.agents:
             agent.state.carrying = None
@@ -179,11 +179,11 @@ class DisciplineRules:
         """Handle low rosters only after all simultaneous cards are applied."""
         remaining = {team: sum(a.team_index == team for a in self.active_players) for team in (0, 1)}
         if all(count <= 1 for count in remaining.values()):
-            self._neutral_restart(restore_suspended=True)
+            self._no_goal_restart(restore_suspended=True)
             return True
         if min(remaining.values()) <= 1:
             team = min(remaining, key=remaining.get)
-            self._automatic_concession(team)
+            self._goal_by_forfait(team)
             return True
         return False
 
@@ -220,7 +220,7 @@ class DisciplineRules:
             return True
         teams = {foul['offending_team'] for foul in self.last_fouls}
         if len(teams) == 2:
-            self._neutral_restart()
+            self._no_goal_restart()
             return True
         penalties = [foul for foul in self.last_fouls
                      if self._is_penalty_foul(foul['offending_team'], foul['position'])]
@@ -278,7 +278,7 @@ class DisciplineRules:
                 self._apply_red_card(player_id, defer_concession=True)
             self.last_red_card = None
             if not self._card_roster_restart():
-                self._neutral_restart()
+                self._no_goal_restart()
             return
         player_id = cards[0]
         target_id = next(i for i in contest['players'] if i != player_id)

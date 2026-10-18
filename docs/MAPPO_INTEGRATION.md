@@ -14,7 +14,7 @@ replace the trained team's entries in the joint action dictionary.
 
 ## Observation encoding
 
-`soccer.encoding.encode_team` returns sorted player IDs, a float32 actor
+`soccer.observation.encoding.encode_team` returns sorted player IDs, a float32 actor
 observation matrix, one centralized team-state vector, and an active-player
 mask. Actor vectors put self first, then teammates and opponents. Critic
 vectors use a canonical team-first ordering independent of the observer.
@@ -63,17 +63,17 @@ matches and retains episode accounting across rollout chunks.
 ```bash
 source .venv/bin/activate
 # One team learns against the unchanged random-policy baseline.
-PYTHONPATH=src python -m algorithms.mappo.train --team-size 3 --device auto --output checkpoints/random_seed0
+python src/mappo_train.py --team-size 3 --device auto --output checkpoints/random_seed0
 # Both independent teams learn from the same joint transitions.
-PYTHONPATH=src python -m algorithms.mappo.train --team-size 3 --self-play --device auto --output checkpoints/selfplay_seed0
+python src/mappo_train.py --team-size 3 --self-play --device auto --output checkpoints/selfplay_seed0
 # Save every five updates; the final update is always saved.
-PYTHONPATH=src python -m algorithms.mappo.train --updates 20 --checkpoint-interval 5 --output checkpoints/interval_seed0
+python src/mappo_train.py --updates 20 --checkpoint-interval 5 --output checkpoints/interval_seed0
 # Resume for ten additional updates from an existing checkpoint.
-PYTHONPATH=src python -m algorithms.mappo.train --resume checkpoints/interval_seed0/update_0020.pt --updates 10
+python src/mappo_train.py --resume checkpoints/interval_seed0/update_0020.pt --updates 10
 # Watch the last checkpoint (add --self-play for a self-play checkpoint).
-PYTHONPATH=src python -m soccer.watch checkpoints/random_seed0/update_0010.pt --device auto
+python src/watch.py checkpoints/random_seed0/update_0010.pt --device auto
 # Evaluate without opening a window.
-PYTHONPATH=src python -m soccer.watch checkpoints/random_seed0/update_0010.pt --headless --matches 3 --device cpu
+python src/watch.py checkpoints/random_seed0/update_0010.pt --headless --matches 3 --device cpu
 ```
 
 Use distinct output directories/seeds for independent experiments. Existing

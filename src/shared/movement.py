@@ -1,7 +1,7 @@
 """Domain-independent movement stages: build intentions, validate, commit.
 
 The middle stage (conflict resolution) is soccer-specific and lives in
-``soccer/movement.py``. Cleanup note: the generic ``resolve_simultaneous_conflicts``
+``soccer/rules/movement.py``. Cleanup note: the generic ``resolve_simultaneous_conflicts``
 and the ``handle_simultaneous_movement`` wrapper were removed because only the
 old snowplow environment used them.
 """

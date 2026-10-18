@@ -4,7 +4,7 @@ import torch
 
 from algorithms.mappo.buffer import RolloutBuffer
 from algorithms.mappo.networks import actions_to_env
-from soccer.encoding import encode_team
+from soccer.observation.encoding import encode_team
 
 
 class ExperienceCollector:

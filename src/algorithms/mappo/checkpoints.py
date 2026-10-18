@@ -5,7 +5,7 @@ from pathlib import Path
 
 import torch
 
-from soccer.encoding import ENCODING_VERSION
+from soccer.observation.encoding import ENCODING_VERSION
 
 CHECKPOINT_VERSION = 1
 

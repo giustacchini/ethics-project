@@ -1,7 +1,7 @@
 import pytest
 
 from soccer.env import SoccerEnv
-from soccer.validate_matches import check_state, run_match
+from validate_matches import check_state, run_match
 
 
 @pytest.mark.parametrize('size', [2, 3])

@@ -2,7 +2,7 @@
 
 from enums import SoccerEvent
 from shared.rewards import EventRewardCalculator
-from soccer.agent import SoccerAgentRole
+from soccer.entities.agent import SoccerAgentRole
 
 # Session choice supersedes the Markdown's shaped baseline: no intermediate
 # rewards. Keep the existing public constant name for callers.

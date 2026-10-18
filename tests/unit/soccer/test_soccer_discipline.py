@@ -4,10 +4,10 @@ import numpy as np
 import pytest
 
 from enums import MovementActions, SoccerActionType
-from soccer.agent import SoccerAgentRole
-from soccer.ball import CustomBall
+from soccer.entities.agent import SoccerAgentRole
+from soccer.entities.ball import CustomBall
 from soccer.env import SoccerEnv, SoccerEnvConfig
-from soccer.rendering import TEAM_COLORS, render_soccer_frame
+from soccer.rendering.pitch import TEAM_COLORS, render_soccer_frame
 
 
 def carded_foul(env, offender_id, target_id, monkeypatch):
@@ -40,7 +40,7 @@ def test_one_player_concedes_instead_of_free_kick_or_penalty(size, offender_slot
     obs, rewards, terms, _, infos = carded_foul(env, offender.index, target.index, monkeypatch)
     assert env.team_scores == {0: 0, 1: 1}
     assert env.last_goal['reason'] == 'one_active_player'
-    assert infos[0]['restart']['type'] == 'automatic_goal'
+    assert infos[0]['restart']['type'] == 'goal_by_forfait'
     assert infos[0]['red_card']['player'] == offender.index
     assert not env.np_random.random.called and not env.np_random.integers.called
     assert all(not a.suspended for a in env.agents)

@@ -1,7 +1,7 @@
 import pytest
 
 from enums import MovementActions
-from soccer.ball import CustomBall
+from soccer.entities.ball import CustomBall
 from soccer.env import SoccerEnv, SoccerEnvConfig
 
 

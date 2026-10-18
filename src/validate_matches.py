@@ -9,10 +9,10 @@ from pathlib import Path
 
 import numpy as np
 
-from soccer.ball import CustomBall
+from soccer.entities.ball import CustomBall
 from soccer.config import SoccerEnvConfig
 from soccer.env import SoccerEnv
-from soccer.statistics import summarize
+from soccer.evaluation.statistics import summarize
 
 
 def canonical(value):
@@ -104,7 +104,7 @@ def run_match(team_size, seed, max_steps=1000, event_log_path=None, show_events=
         env.close()
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--seeds', type=int, default=5)
     parser.add_argument('--max-steps', type=int, default=1000)
@@ -112,7 +112,7 @@ def main():
     parser.add_argument('--event-log-dir', type=Path, help='Save one full trace per validated match')
     parser.add_argument('--show-events', action='store_true', help='Print events from the first execution of each match')
     parser.add_argument('--render-fps', type=int, default=20, dest="render_fps")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.seeds < 1 or args.max_steps < 1:
         parser.error('seeds and max-steps must be positive')
     summaries = []

@@ -5,7 +5,7 @@ import torch
 from algorithms.mappo.networks import Actor, SoccerActionDistribution, actions_to_env, masked_actor_mean
 from algorithms.mappo.teams import create_teams
 from enums import SoccerActionType
-from soccer.encoding import encode_team
+from soccer.observation.encoding import encode_team
 from soccer.env import SoccerEnv, SoccerEnvConfig
 
 

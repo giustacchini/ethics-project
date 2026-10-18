@@ -20,6 +20,33 @@ def json_value(value):
     return value
 
 
+def format_event(record):
+    """Human-readable console output; the persisted record remains unchanged."""
+    kind, step = record['type'], record['step']
+    d = record.get('details', {})
+    side = lambda team: 'LEFT' if team == 0 else 'RIGHT'
+    suffix = f' (transition {step})'
+    if kind == 'match_start':
+        return f"MATCH {record['match']} STARTS"
+    if kind == 'match_end':
+        score = record['score']
+        return f"MATCH {record['match']} ENDS — LEFT {score['0']}–{score['1']} RIGHT" + suffix
+    if kind == 'goal':
+        score = record.get('score', {})
+        label = 'GOAL BY FORFAIT' if d.get('reason') == 'one_active_player' else 'GOAL'
+        return f"{label} {side(d['team'])} — LEFT {score.get('0', '?')}–{score.get('1', '?')} RIGHT" + suffix
+    if kind == 'foul':
+        return f"FOUL Player {d['offender']} - {side(d['offending_team'])} against Player {d['fouled_player']}" + suffix
+    if kind == 'red_card':
+        return f"RED CARD Player {d['player']} - {side(d['team'])}" + suffix
+    if kind == 'restart':
+        label = d['type'].replace('_', ' ').upper()
+        return label + (f" for {side(d['team'])}" if 'team' in d else '') + suffix
+    if kind == 'dive' and d.get('status') in ('saved', 'failed'):
+        return f"SAVE {d['status'].upper()} Player {record['player']} - {side(record['team'])}" + suffix
+    return None
+
+
 class MatchLog:
     """Keep current-match history; optionally stream every record to JSONL."""
 
@@ -49,8 +76,10 @@ class MatchLog:
     def emit(self, kind, step, **data):
         record = json_value(dict(schema_version=1, match=self.match, step=step, type=kind, **deepcopy(data)))
         self.records.append(record)
-        if self.show_events and kind not in ('actions', 'state'):
-            print(json.dumps(record, allow_nan=False), flush=True)
+        if self.show_events:
+            message = format_event(record)
+            if message is not None:
+                print(message, flush=True)
         if self.path is not None:
             with self.path.open('a') as stream:
                 stream.write(json.dumps(record, allow_nan=False) + '\n')
@@ -76,7 +105,7 @@ class MatchLog:
                            ('restart', 'last_restart'), ('goal', 'last_goal')):
             value = getattr(env, attr)
             if value is not None:
-                self.emit(kind, env.step_count, details=value)
+                self.emit(kind, env.step_count, details=value, **({'score': env.team_scores} if kind == 'goal' else {}))
         if env.last_goal is not None and not env.match_over:
             self.emit('restart', env.step_count, details=dict(type='kickoff',
                       team=env.last_goal['conceding_team'], position=env.ball.position))

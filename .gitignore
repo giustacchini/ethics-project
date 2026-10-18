@@ -220,3 +220,6 @@ __marimo__/
 results
 checkpoints
 logs
+
+# Generated playback evaluation runs
+evaluations/

@@ -2,7 +2,7 @@ from itertools import product
 
 import pytest
 
-from soccer.agent import SoccerAgentRole
+from soccer.entities.agent import SoccerAgentRole
 from soccer.env import SoccerEnv, SoccerEnvConfig
 
 

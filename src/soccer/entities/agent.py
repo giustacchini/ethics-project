@@ -29,5 +29,5 @@ class SoccerAgent(Agent):
         })
 
     # NOTE: drawing used to live here (Agent.render, called per tile by SoccerGrid).
-    # It now lives in soccer/rendering.py, which draws goalkeeper = square and
+    # It now lives in soccer/rendering/pitch.py, which draws goalkeeper = square and
     # field player = triangle in the original Mosaic style.

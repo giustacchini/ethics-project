@@ -2,7 +2,7 @@
 
 A provider only reads the environment and never changes it. It is separate
 from the environment's step logic, so the view can be changed without
-rewriting the environment. ``soccer.observations.SoccerObservationProvider``
+rewriting the environment. ``soccer.observation.provider.SoccerObservationProvider``
 is the only implementation.
 
 Cleanup note: ``FullObservationProvider`` and ``LocalObservationProvider``

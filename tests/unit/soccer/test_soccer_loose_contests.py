@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from enums import MovementActions, SoccerActionType
-from soccer.ball import CustomBall
+from soccer.entities.ball import CustomBall
 from soccer.env import SoccerEnv, SoccerEnvConfig
 
 
@@ -83,7 +83,7 @@ def test_double_cards_reducing_both_to_one_use_neutral_restart(size, choice):
     assert env.ball.carrier_id is None
     assert env.ball.last_possessing_team is None
     assert all(not a.suspended and a.current_role == a.original_role for a in env.agents)
-    assert env.last_restart['type'] == 'neutral'
+    assert env.last_restart['type'] == 'no_goal_restart'
     assert len(infos[0]['red_cards']) == 2
     assert env.last_goal is None
     assert env.step_count == 1
@@ -97,7 +97,7 @@ def test_single_card_in_two_v_two_concedes_one_goal():
     env.np_random = Mock(random=Mock(side_effect=[0.1, 0.1, 0.1]))
     env.step(actions)
     assert env.team_scores == {0: 0, 1: 1}
-    assert env.last_restart['type'] == 'automatic_goal'
+    assert env.last_restart['type'] == 'goal_by_forfait'
     assert env.last_loose_ball_contest['winner'] is None
 
 
@@ -135,7 +135,7 @@ def test_double_cards_with_two_players_remaining_preserve_suspensions():
     assert env.ball.position == (8, 5)
     assert env.agents[2].state.pos == (3, 7)
     assert env.agents[5].state.pos == (12, 7)
-    assert env.last_restart['type'] == 'neutral'
+    assert env.last_restart['type'] == 'no_goal_restart'
     assert env.step_count == 1
     assert set(rewards.values()) == {0}
     assert env.observation_space.contains(obs)
@@ -187,7 +187,7 @@ def test_double_cards_with_asymmetric_rosters_keep_single_team_concession():
     env.np_random = Mock(random=Mock(side_effect=[0.1, 0.1, 0.1, 0.1]))
     env.step(actions)
     assert env.team_scores == {0: 0, 1: 1}
-    assert env.last_restart['type'] == 'automatic_goal'
+    assert env.last_restart['type'] == 'goal_by_forfait'
     assert all(not a.suspended for a in env.agents)
 
 

@@ -14,7 +14,7 @@ from algorithms.mappo.experience_collector import ExperienceCollector
 from algorithms.mappo.mappo_update import ppo_update
 from algorithms.mappo.teams import create_teams
 from soccer.config import SoccerEnvConfig
-from soccer.encoding import encode_team
+from soccer.observation.encoding import encode_team
 from soccer.env import SoccerEnv
 
 
@@ -121,7 +121,7 @@ def train(config):
         env.close()
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     for name, default in (('team-size', 3), ('seed', 0), ('updates', 10), ('rollout-steps', 128),
                           ('max-steps', 1000), ('hidden', 64), ('epochs', 4), ('minibatches', 4), ('training-team', 0)):
@@ -139,7 +139,7 @@ def main():
                         help='resume training from a checkpoint and continue for --updates more updates')
     parser.add_argument('--self-play', action='store_true')
     parser.add_argument('--torch-threads', type=int, default=1)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if args.torch_threads < 1:
         parser.error('torch-threads must be positive')
     torch.set_num_threads(args.torch_threads)

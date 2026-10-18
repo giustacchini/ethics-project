@@ -1,8 +1,8 @@
 import pytest
 
 from enums import MovementActions, SoccerActionType
-from soccer.agent import SoccerAgentRole
-from soccer.ball import CustomBall
+from soccer.entities.agent import SoccerAgentRole
+from soccer.entities.ball import CustomBall
 from soccer.env import SoccerEnv, SoccerEnvConfig
 
 

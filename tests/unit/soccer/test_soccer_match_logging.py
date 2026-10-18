@@ -49,7 +49,7 @@ def test_simultaneous_cards_and_fouls_logged_individually(tmp_path):
     records = env.match_log.records
     assert len([r for r in records if r['type'] == 'foul']) == 2
     assert {r['details']['player'] for r in records if r['type'] == 'red_card'} == {1, 5}
-    assert [r['details']['type'] for r in records if r['type'] == 'restart'] == ['neutral']
+    assert [r['details']['type'] for r in records if r['type'] == 'restart'] == ['no_goal_restart']
     env.step(wait(env))
     assert len([r for r in records if r['type'] == 'red_card']) == 2
     env.close()
@@ -69,16 +69,30 @@ def test_goal_and_kickoff_recorded():
 
 
 def test_console_events_and_validation_trace(tmp_path, capsys):
-    from soccer.validate_matches import run_match
+    from validate_matches import run_match
 
     path = tmp_path / 'validation.jsonl'
     summary, trace = run_match(2, 0, max_steps=2, event_log_path=path, show_events=True)
-    printed = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    printed = capsys.readouterr().out.splitlines()
     saved = [json.loads(line) for line in path.read_text().splitlines()]
-    assert printed == [r for r in saved if r['type'] not in ('actions', 'state')]
-    assert printed[0]['type'] == 'match_start'
-    assert printed[-1]['type'] == 'match_end'
+    from soccer.evaluation.match_logging import format_event
+    assert printed == [message for r in saved if (message := format_event(r)) is not None]
+    assert printed[0] == 'MATCH 1 STARTS'
+    assert printed[-1].startswith('MATCH 1 ENDS')
     repeated_summary, repeated_trace = run_match(2, 0, max_steps=2)
     assert not capsys.readouterr().out
     assert summary == repeated_summary
     assert trace == repeated_trace
+
+
+def test_readable_goal_card_foul_and_restart_messages():
+    from soccer.evaluation.match_logging import format_event
+
+    base = dict(match=2, step=68)
+    assert format_event(dict(base, type='goal', score={'0': 1, '1': 0},
+                             details=dict(team=0))) == 'GOAL LEFT — LEFT 1–0 RIGHT (transition 68)'
+    assert format_event(dict(base, type='red_card', details=dict(player=4, team=1))) == 'RED CARD Player 4 - RIGHT (transition 68)'
+    assert format_event(dict(base, type='restart', details=dict(type='free_kick', team=1))) == 'FREE KICK for RIGHT (transition 68)'
+    assert 'Player 2 - LEFT against Player 5' in format_event(dict(base, type='foul',
+                         details=dict(offender=2, offending_team=0, fouled_player=5)))
+    assert format_event(dict(base, type='actions')) is None

@@ -9,17 +9,17 @@ from mosaic_multigrid.core.constants import TILE_PIXELS
 
 from enums import MovementActions, SoccerActionType, SoccerEvent
 from shared.events import EventLog
-from soccer.movement import resolve_simultaneous_conflicts
+from soccer.rules.movement import resolve_simultaneous_conflicts
 from shared.movement import build_movement_intentions, validate_proposed_moves, commit_resolved_positions
-from soccer.agent import SoccerAgent, SoccerAgentRole
-from soccer.ball import CustomBall
-from soccer.rendering import render_soccer_frame
-from soccer.rewards import make_soccer_reward_calculator, SHAPED_PRESETS, approach_shaping, team_potential
+from soccer.entities.agent import SoccerAgent, SoccerAgentRole
+from soccer.entities.ball import CustomBall
+from soccer.rendering.pitch import render_soccer_frame
+from soccer.rules.rewards import make_soccer_reward_calculator, SHAPED_PRESETS, approach_shaping, team_potential
 from soccer.config import SoccerEnvConfig
-from soccer.ball_rules import BallRules
-from soccer.discipline import DisciplineRules
-from soccer.observations import SoccerObservationProvider
-from soccer.match_logging import MatchLog
+from soccer.rules.ball_rules import BallRules
+from soccer.rules.discipline import DisciplineRules
+from soccer.observation.provider import SoccerObservationProvider
+from soccer.evaluation.match_logging import MatchLog
 
 
 class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
@@ -113,7 +113,7 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
         """Restore players without resetting scores, elapsed time or events."""
         width, height = self.width, self.height
         self.free_kick_taker = None
-        self.grid = Grid(width, height)  # plain Mosaic grid: it only stores the ball; drawing lives in soccer/rendering.py
+        self.grid = Grid(width, height)  # plain Mosaic grid: it only stores the ball; drawing lives in soccer/rendering/pitch.py
         team_size = self.config.n_players_per_team
         formations = (
             (((0, 5), (3, 5)), ((15, 5), (12, 5))) if team_size == 2 else
@@ -167,7 +167,7 @@ class SoccerEnv(BallRules, DisciplineRules, MultiGridEnv):
 
         Mosaic's get_frame()/render() (human window and rgb_array) call this hook.
         It used to draw flat green tiles through a custom Grid subclass; it now
-        delegates to soccer/rendering.py. ``highlight`` is ignored on purpose:
+        delegates to soccer/rendering/pitch.py. ``highlight`` is ignored on purpose:
         our observations are the full structured state, so there is no local
         field of view to highlight. Game logic is not touched by rendering.
         """

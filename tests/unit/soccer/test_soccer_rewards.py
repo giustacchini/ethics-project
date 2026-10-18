@@ -1,6 +1,6 @@
 from enums import SoccerEvent
 from shared.events import Event
-from soccer.rewards import make_soccer_reward_calculator
+from soccer.rules.rewards import make_soccer_reward_calculator
 
 # Agents 0, 1, 2 are in team 1; agents 3, 4, 5 are in team 2
 TEAMS_3V3 = {0: 1, 1: 1, 2: 1, 3: 2, 4: 2, 5: 2}
@@ -35,7 +35,7 @@ def test_draw_is_punished_for_both_teams():
 import pytest
 
 from enums import MovementActions
-from soccer.ball import CustomBall
+from soccer.entities.ball import CustomBall
 from soccer.env import SoccerEnv, SoccerEnvConfig
 
 

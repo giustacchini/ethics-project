@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from enums import MovementActions, SoccerActionType
-from soccer.ball import CustomBall
+from soccer.entities.ball import CustomBall
 from soccer.env import SoccerEnv, SoccerEnvConfig
 
 

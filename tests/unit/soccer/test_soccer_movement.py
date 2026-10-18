@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from soccer.movement import resolve_simultaneous_conflicts
+from soccer.rules.movement import resolve_simultaneous_conflicts
 
 
 def resolve(positions, targets, teams, seed=7, reverse=False):

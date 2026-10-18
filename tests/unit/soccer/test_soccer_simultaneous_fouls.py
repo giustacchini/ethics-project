@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from enums import MovementActions, SoccerActionType
-from soccer.ball import CustomBall
+from soccer.entities.ball import CustomBall
 from soccer.env import SoccerEnv
 
 
@@ -55,7 +55,7 @@ def test_both_team_fouls_restart_neutrally_preserving_cards(cards):
     env, actions = arrange(both_teams=True, cards=cards)
     env.np_random = Mock(random=Mock(return_value=0.1), integers=Mock(return_value=1))
     obs, rewards, *_ = env.step(actions)
-    assert env.last_restart['type'] == 'neutral'
+    assert env.last_restart['type'] == 'no_goal_restart'
     assert env.ball.position == (8, 5)
     assert env.team_scores == {0: 0, 1: 0}
     assert env.agents[1].suspended == cards
@@ -81,7 +81,7 @@ def test_both_teams_reduced_to_one_restore_everyone_without_goals():
     actions[4] = foul_action(2, True)
     env.np_random = Mock(random=Mock(return_value=0.1), integers=Mock(return_value=0))
     env.step(actions)
-    assert env.last_restart['type'] == 'neutral'
+    assert env.last_restart['type'] == 'no_goal_restart'
     assert env.team_scores == {0: 0, 1: 0}
     assert env.ball.position == (7, 5)
     assert all(not a.suspended and a.current_role == a.original_role for a in env.agents)
@@ -94,7 +94,7 @@ def test_only_one_team_reduced_to_one_concedes_instead_of_neutral_restart():
     env.agents[4].state.pos = (2, 5)
     env.np_random = Mock(random=Mock(return_value=0.1))
     env.step(actions)
-    assert env.last_restart['type'] == 'automatic_goal'
+    assert env.last_restart['type'] == 'goal_by_forfait'
     assert env.team_scores == {0: 0, 1: 1}
     assert len(env.last_red_cards) == 2
     assert not env.np_random.integers.called
@@ -104,7 +104,7 @@ def test_same_team_different_target_cards_concede_only_once():
     env, actions = arrange(cards=True)
     env.np_random = Mock(random=Mock(return_value=0.1))
     env.step(actions)
-    assert env.last_restart['type'] == 'automatic_goal'
+    assert env.last_restart['type'] == 'goal_by_forfait'
     assert env.team_scores == {0: 0, 1: 1}
     assert len(env.last_fouls) == len(env.last_red_cards) == 2
 

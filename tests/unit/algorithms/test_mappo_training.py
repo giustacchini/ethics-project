@@ -9,9 +9,9 @@ from algorithms.mappo.mappo_update import ppo_update
 from algorithms.mappo.teams import create_teams
 from mappo_train import TrainingConfig, train
 from soccer.config import SoccerEnvConfig
-from soccer.encoding import encode_team
+from soccer.observation.encoding import encode_team
 from soccer.env import SoccerEnv
-from soccer.watch import watch
+from watch import watch
 
 
 def setup(size=3, max_steps=3, training=(0, 1), device='cpu'):
@@ -120,7 +120,17 @@ def test_training_checkpoint_and_headless_watch(tmp_path, self_play, size):
     assert result['checkpoint'].exists()
     assert (tmp_path / 'run' / 'metrics.jsonl').exists()
     assert len(result['metrics'][0]['completed_matches']) == 2
-    results = watch(result['checkpoint'], matches=2, device='cpu', headless=True, self_play=self_play)
+    results = watch(result['checkpoint'], matches=2, device='cpu', headless=True, self_play=self_play,
+                    output_root=tmp_path / 'evaluations')
+    import json
+    directory, = (tmp_path / 'evaluations').iterdir()
+    report = json.loads((directory / 'statistics.json').read_text())
+    assert report['completed_matches'] == 2
+    assert len(report['per_match']) == 2
+    assert report['teams']['0']['totals']['draws'] == 2
+    assert report['teams']['0']['averages_per_match']['draws'] == 1
+    assert (directory / 'events.jsonl').exists()
+    assert (directory / 'evaluation.json').exists()
     assert len(results) == 2
     assert all(match['transitions'] == 2 for match in results)
     with pytest.raises(FileExistsError):

@@ -1,6 +1,6 @@
 import json
 
-from soccer.statistics import summarize
+from soccer.evaluation.statistics import summarize
 from soccer.env import SoccerEnv
 from enums import MovementActions
 
@@ -32,7 +32,7 @@ def test_statistics_intent_consequences_denominators_and_simultaneous_cards():
     assert left['resolved_challenges'] == left['resolved_aggressive_challenges'] == 1
     assert right['resolved_challenges'] == 1
     assert left['fouls_per_1000_active_player_transitions'] == 1000
-    assert left['penalties_conceded'] == left['automatic_goals_conceded'] == 1
+    assert left['penalties_conceded'] == left['goals_conceded_due_to_too_few_players_on_pitch'] == 1
     assert left['losses'] == right['wins'] == 1
     assert left['goals_conceded'] == right['goals_scored'] == 1
 
@@ -62,3 +62,25 @@ def test_saved_trace_and_memory_statistics_agree(tmp_path):
     assert saved['teams'][0]['active_player_transitions'] == 6
     assert saved['teams'][0]['draws'] == 1
     env.close()
+
+
+def test_evaluation_report_pools_all_matches_and_separates_averages():
+    from soccer.evaluation.statistics import evaluation_report
+
+    rows = []
+    for match, fouls in ((1, 3), (2, 1)):
+        start = record('match_start', players=[dict(id=0, team=0)])
+        start['match'] = match
+        rows.append(start)
+        for step in range(1, fouls + 1):
+            row = record('foul', step, details=dict(offending_team=0))
+            row['match'] = match
+            rows.append(row)
+        end = record('match_end', fouls, score={'0': 0, '1': 0}, winner=None)
+        end['match'] = match
+        rows.append(end)
+    result = evaluation_report(summarize(rows))
+    assert result['teams'][0]['totals']['fouls'] == 4
+    assert result['teams'][0]['averages_per_match']['fouls'] == 2
+    assert [m['teams'][0]['totals']['fouls'] for m in result['per_match']] == [3, 1]
+    assert result['teams'][0]['rates']['fouls_per_1000_active_player_transitions'] is None

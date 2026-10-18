@@ -12,7 +12,7 @@ or 2 limits traversal to one or two trajectory cells in that transition.
 
 Current implementation choices for review:
 
-- Integer-grid interpolation uses the Bresenham helper in `soccer/ball.py`.
+- Integer-grid interpolation uses the Bresenham helper in `soccer/entities/ball.py`.
   It excludes the origin and includes the destination.
 - Player contact uses committed player positions. A player arriving on an
   already in-flight ball's current cell receives it before further flight.
@@ -445,7 +445,7 @@ branches in src/soccer; full-match integration validation is still required.
 
 ## Structured-only full observability
 
-SoccerObservationProvider in soccer/observations.py supplies each roster
+SoccerObservationProvider in soccer/observation/provider.py supplies each roster
 member the complete structured game state and its own ID/team. It also
 defines the matching Gymnasium observation space. Returned snapshots remain
 independent of the environment and each other, including final observations.

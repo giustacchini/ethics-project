@@ -3,7 +3,7 @@ from unittest.mock import Mock
 import pytest
 
 from enums import MovementActions, SoccerActionType
-from soccer.ball import CustomBall
+from soccer.entities.ball import CustomBall
 from soccer.env import SoccerEnv, SoccerEnvConfig
 
 
@@ -71,7 +71,7 @@ def test_two_player_card_awards_only_one_goal():
     env.np_random = Mock(random=Mock(side_effect=[0.1, 0.1]))
     env.step(actions)
     assert env.team_scores == {0: 0, 1: 1}
-    assert env.last_restart['type'] == 'automatic_goal'
+    assert env.last_restart['type'] == 'goal_by_forfait'
     assert all(not a.suspended for a in env.agents)
     assert env.np_random.random.call_count == 2
 
