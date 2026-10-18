@@ -1,0 +1,1 @@
+"""Soccer rendering components."""

@@ -1,6 +1,6 @@
 from shared.events import Event, EventLog
 from enum import Enum, auto
-from Enums import EventType
+from enums import EventType
 
 
 
